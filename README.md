@@ -1,9 +1,10 @@
 # OMD Library Docs MCP Server
 
 A local, read-only documentation retrieval server for GitHub Copilot Agent
-mode. **omd** indexes nine curated collections — ESMF/NUOPC, Kokkos, Kokkos
-Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM, PyTorch and
-PyTorch Forecasting — and retrieves complete
+mode. **omd** indexes seventeen curated collections — ESMF/NUOPC, Kokkos, Kokkos
+Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM, PyTorch,
+PyTorch Forecasting, Dask, dask-jobqueue, ecFlow, UFS Weather Model, MOM6,
+CICE, FV3 and MPAS — and retrieves complete
 manual sections, Fortran routines and C++ examples with release provenance
 and citations. It separates API requirements, examples, framework
 implementation, and your application code.
@@ -14,11 +15,13 @@ changes. This replaces the earlier general PDF/Ollama server.
 
 ## Collections
 
-ESMF, Kokkos, standards, JEDI and CCPP source snapshots are bundled in the
+ESMF, Kokkos, standards, JEDI, CCPP, Dask, dask-jobqueue, ecFlow, UFS, CICE,
+FV3 and MPAS source snapshots are bundled in the
 repository. PyTorch and PyTorch Forecasting HTML pages are fetched from their
-versioned documentation paths while building the Docker image. The generated
-`corpus.json` manifest and SQLite index are build artifacts, not committed
-inputs.
+versioned documentation paths, and the MOM6 site is crawled from
+`https://mom6.readthedocs.io/en/main/`, while building the Docker image. The
+generated `corpus.json` manifest and SQLite index are build artifacts, not
+committed inputs.
 
 | Collection | Content | Version label | Units |
 | --- | --- | --- | --- |
@@ -31,6 +34,14 @@ inputs.
 | `ccpp-scm` | CCPP Single Column Model (SCM) technical guide (`NCAR/ccpp-scm` main commit `a52680b013066e0f3135d63ae587ced18a434e86`), matching RTD `/en/latest/` | `snapshot-a52680b01306` | 95 |
 | `pytorch` | Complete PyTorch HTML docs under `https://docs.pytorch.org/docs/2.14/` | `2.14` | generated during build |
 | `pytorch-forecasting` | Complete PyTorch Forecasting HTML docs under `https://pytorch-forecasting.readthedocs.io/en/v1.0.0/` | `1.0.0` | generated during build |
+| `dask` | Dask documentation source at release tag `2026.8.0` (commit `9dc535daa30d`); autosummary API pages are stubs in source and expand only on the rendered site | `2026.8.0` | bundled |
+| `dask-jobqueue` | dask-jobqueue documentation source at release tag `0.9.0` (commit `b91983d8192c`) | `0.9.0` | bundled |
+| `ecflow` | ecFlow documentation source at release tag `5.19.0` (commit `b6c3ef73323e`), including the committed Python/REST client API pages | `5.19.0` | bundled |
+| `ufs-weather-model` | UFS Weather Model Users Guide source at release tag `Release/P8b` (commit `9b6b7402de2c`) | `P8b` | bundled |
+| `mom6` | Complete MOM6 HTML docs crawled from `https://mom6.readthedocs.io/en/main/` (the authoritative site; includes the Doxygen API reference that exists only rendered; corresponds to main commit `0e9a5611a9f6`) | `snapshot-main` | generated during build |
+| `cice` | CICE documentation source at release tag `CICE6.6.3` (commit `c734c12bfb19`); BSD-3-Clause `LICENSE.pdf` retained beside the corpus | `6.6.3` | bundled |
+| `fv3` | FV3 LaTeX technical guide (`fv3_technical_2021.tex`) at release tag `FV3-202604-public` (commit `6f658bd00ffa`), plus example Fortran/README files; Jupyter notebooks are not indexed | `202604` | bundled |
+| `mpas` | MPAS-Dev/MPAS-Documents (the authoritative MPAS documentation repository) master commit `69b46ed16748` — user's guides, developer's guide and design documents in LaTeX; no upstream license file, attribution recorded | `snapshot-69b46ed16748` | bundled |
 
 Unit counts for fetched collections are reported by `list_collections` after
 building the index. Kokkos pins are recorded in `kokkos-lock.json` (stable releases checked
@@ -46,7 +57,14 @@ together. The ESMF source license is in `corpus/LICENSE`; the JEDI license is
 `corpus/jedi/COPYING` and the NWS disclaimer is
 `corpus/nws-hpc-standards/DISCLAIMER.md`. The prototypes repository and
 `NCAR/ccpp-doc` do not ship a top-level license file in the fetched trees;
-prototype source files carry the Illinois-NCSA header.
+prototype source files carry the Illinois-NCSA header. Among the weather and
+workflow collections, Dask and dask-jobqueue carry BSD-3 `LICENSE.txt`, ecFlow
+carries Apache-2.0 `LICENSE` and `NOTICE`, CICE carries BSD-3 `LICENSE.pdf` and
+`COPYRIGHT.pdf`, FV3 carries LGPL v3 `LICENSE.md`, MOM6 carries Apache-2.0, and
+the UFS Users Guide carries the repository's mixed-component `LICENSE.md` —
+each retained beside its corpus directory.
+`MPAS-Dev/MPAS-Documents` ships no license file; its attribution is recorded in
+the catalog `version_basis`.
 
 ### Kokkos
 
@@ -152,8 +170,8 @@ name conflict — use `./run-omd-mcp.sh` (`--rebuild` or `--stop` supported).
 build. To regenerate the local development index:
 
 ```sh
-uv run build_manifest.py
-uv run ingest.py
+uv run src/build_manifest.py
+uv run src/ingest.py
 ```
 
 `corpus.catalog.json` is the tracked source catalog. `corpus.json` is generated
@@ -165,8 +183,8 @@ Clone this repository, open it in VS Code, and run in its terminal:
 
 ```sh
 uv sync
-uv run fetch_pytorch.py
-uv run ingest.py
+uv run src/fetch_pytorch.py
+uv run src/ingest.py
 ```
 
 The bundled sources let you index without downloading manuals again; fetching
@@ -240,7 +258,7 @@ Use a narrow directory containing the cap, driver and relevant configurations;
 add additional entries for separate directories/files. Then rerun:
 
 ```sh
-uv run ingest.py
+uv run src/ingest.py
 ```
 
 Files are snapshotted into the index, not read live during tool calls. Re-ingest
@@ -314,8 +332,8 @@ and merge them back.
 ESMF **8.9.1** manuals, examples and source:
 
 ```sh
-uv run fetch_corpus.py
-uv run ingest.py
+uv run src/fetch_corpus.py
+uv run src/ingest.py
 ```
 
 It downloads only the four pinned 8.9.1 manual trees, clones ESMF tag v8.9.1,
@@ -328,13 +346,13 @@ a disk failure during replacement may require rerunning the fetcher.
 If you already have a clean release checkout:
 
 ```sh
-uv run fetch_corpus.py --esmf-repo /path/to/esmf-v8.9.1
+uv run src/fetch_corpus.py --esmf-repo /path/to/esmf-v8.9.1
 ```
 
 To override the pinned prototypes checkout as well:
 
 ```sh
-uv run fetch_corpus.py --esmf-repo /path/to/esmf-v8.9.1 --protos-repo /path/to/nuopc-app-prototypes
+uv run src/fetch_corpus.py --esmf-repo /path/to/esmf-v8.9.1 --protos-repo /path/to/nuopc-app-prototypes
 ```
 
 Use `--skip-manuals` to reuse the cached manual directories. The fetcher refuses
@@ -344,27 +362,55 @@ separately, refresh official sources, then merge them back and re-ingest.
 Kokkos core docs and Kernels release docs (requires Git and internet):
 
 ```sh
-uv run fetch_kokkos.py          # reproduce the pinned sources
-uv run fetch_kokkos.py --latest # newest core docs and latest stable Kernels
-uv run ingest.py
+uv run src/fetch_kokkos.py          # reproduce the pinned sources
+uv run src/fetch_kokkos.py --latest # newest core docs and latest stable Kernels
+uv run src/ingest.py
 ```
 
 NWS-HPC standards and JEDI docs (requires Git and internet):
 
 ```sh
-uv run fetch_standards.py          # reproduce the pinned sources
-uv run fetch_standards.py --ccpp-repo /path/to/ccpp-doc
-uv run fetch_standards.py --latest # newest NWS release tag, current JEDI develop and current CCPP main
-uv run ingest.py
+uv run src/fetch_standards.py          # reproduce the pinned sources
+uv run src/fetch_standards.py --ccpp-repo /path/to/ccpp-doc
+uv run src/fetch_standards.py --latest # newest NWS release tag, current JEDI develop and current CCPP main
+uv run src/ingest.py
 ```
 
 PyTorch and PyTorch Forecasting docs (requires internet; fetched from the
 version-pinned documentation paths):
 
 ```sh
-uv run fetch_pytorch.py
-uv run ingest.py
+uv run src/fetch_pytorch.py
+uv run src/ingest.py
 ```
+
+Weather and workflow docs — Dask, dask-jobqueue, ecFlow, UFS Weather Model,
+CICE, FV3 and MPAS git snapshots, plus the MOM6 site crawl (requires Git and
+internet):
+
+```sh
+uv run src/fetch_weather.py              # fetch any collection not yet acquired
+uv run src/fetch_weather.py --latest     # re-fetch all to newest tag/branch (re-crawls MOM6)
+uv run src/fetch_weather.py --only mom6  # acquire MOM6 only if its corpus is missing
+uv run src/ingest.py
+```
+
+MOM6 is crawled from `https://mom6.readthedocs.io/en/main/` during the Docker
+build (like PyTorch) because its Doxygen API reference exists only on the
+rendered site; the other seven libraries are committed source snapshots.
+`weather-lock.json` records every pin. MPAS documentation comes from the
+separate `MPAS-Dev/MPAS-Documents` repository (the authoritative docs repo,
+LaTeX-based; the model repo's `docs/` is a stub). FV3's Jupyter notebooks are
+not indexable and are excluded; the LaTeX technical guide and Fortran examples
+are included.
+
+A refresh is **idempotent**: any library already recorded in `weather-lock.json`
+with a populated `corpus/` tree and a catalog entry is skipped, so re-running the
+fetcher (or rebuilding Docker from a working tree) does not re-hit the network.
+The MOM6 site is a Read-the-Docs crawl that the platform throttles aggressively,
+so this reuse matters; pass `--latest` to force a fresh crawl. The crawl paces
+each request (2s, 2 workers) and waits out rate-limit windows rather than dying
+on them.
 
 For Git-backed collections, `--latest` records new commits/version labels in
 the lock file; it never happens automatically. PyTorch documentation remains
@@ -390,9 +436,9 @@ NUOPC_CompSpecialize, NUOPC_DriverAddComp and NUOPC_Advertise. Real example sear
 check driver registration and cap labels against the pinned source commit, and
 regression coverage now pins prototype discoverability plus CCPP included-code
 and auxiliary-file handling.
-Further tests cover collection/version isolation across all nine libraries,
-Markdown and RST parsing, included-code retrieval, fetcher helpers, and real
-documentation from the Kokkos, NWS, JEDI and CCPP collections (40 unit tests total).
+Further tests cover collection/version isolation across all seventeen libraries,
+Markdown, RST and LaTeX parsing, included-code retrieval, fetcher helpers, and real
+documentation from the Kokkos, NWS, JEDI and CCPP collections (59 unit tests).
 The smoke test exercises all thirteen tools through a real MCP stdio client/server;
 `tests.smoke_docker` replays the same calls inside the built image.
 

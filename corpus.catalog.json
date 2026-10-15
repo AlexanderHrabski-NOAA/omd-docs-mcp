@@ -193,6 +193,106 @@
       "managed": true,
       "url": "https://pytorch-forecasting.readthedocs.io/en/v1.0.0/",
       "version_basis": "Official versioned documentation site; pages restricted to the pinned release path"
+    },
+    {
+      "name": "dask-docs",
+      "path": "corpus/dask/source",
+      "library": "dask",
+      "version": "2026.8.0",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "9dc535daa30d7d36d63d4a003b54342fbc7032db",
+      "url": "https://github.com/dask/dask/blob/9dc535daa30d7d36d63d4a003b54342fbc7032db/docs/source",
+      "version_basis": "Official release tag 2026.8.0; documentation source imported from the tagged repository tree; autosummary API pages are stubs in source and expand only on the rendered site"
+    },
+    {
+      "name": "dask-jobqueue-docs",
+      "path": "corpus/dask-jobqueue/source",
+      "library": "dask-jobqueue",
+      "version": "0.9.0",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "b91983d8192c5baccbd7dd0a358f66e0987a97ab",
+      "url": "https://github.com/dask/dask-jobqueue/blob/b91983d8192c5baccbd7dd0a358f66e0987a97ab/docs/source",
+      "version_basis": "Official release tag 0.9.0; documentation source from the tagged repository tree"
+    },
+    {
+      "name": "ecflow-docs",
+      "path": "corpus/ecflow/source",
+      "library": "ecflow",
+      "version": "5.19.0",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "b6c3ef73323eb0a6d82586fed080641810b11716",
+      "url": "https://github.com/ECMWF/ecFlow/blob/b6c3ef73323eb0a6d82586fed080641810b11716/docs",
+      "version_basis": "Official release tag 5.19.0; documentation source from the tagged repository tree, including the committed Python and REST client API pages"
+    },
+    {
+      "name": "ufs-weather-model-docs",
+      "path": "corpus/ufs-weather-model/source",
+      "library": "ufs-weather-model",
+      "version": "P8b",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "9b6b7402de2c06eaf121c4a9a4285b651a936c5d",
+      "url": "https://github.com/ufs-community/ufs-weather-model/blob/9b6b7402de2c06eaf121c4a9a4285b651a936c5d/doc/UsersGuide/source",
+      "version_basis": "Official release tag Release/P8b; Users Guide source from the tagged repository tree; the guide itself declares no version number"
+    },
+    {
+      "name": "cice-docs",
+      "path": "corpus/cice/source",
+      "library": "cice",
+      "version": "6.6.3",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "c734c12bfb19632cd700cb06b22c3ea62b4adeae",
+      "url": "https://github.com/CICE-Consortium/CICE/blob/c734c12bfb19632cd700cb06b22c3ea62b4adeae/doc/source",
+      "version_basis": "Official release tag CICE6.6.3; documentation source from the tagged repository tree; BSD-3-Clause license retained as LICENSE.pdf"
+    },
+    {
+      "name": "fv3-docs",
+      "path": "corpus/fv3/source",
+      "library": "fv3",
+      "version": "202604",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "6f658bd00ffa52158c1c0f32244b6dd59a0360d7",
+      "url": "https://github.com/NOAA-GFDL/GFDL_atmos_cubed_sphere/blob/6f658bd00ffa52158c1c0f32244b6dd59a0360d7/docs/doc_source",
+      "version_basis": "Official release tag FV3-202604-public (202604 release); LaTeX technical guide source from the tagged repository tree; Jupyter notebooks in docs/examples are not indexed"
+    },
+    {
+      "name": "fv3-examples",
+      "path": "corpus/fv3/examples",
+      "library": "fv3",
+      "version": "202604",
+      "kind": "example",
+      "managed": true,
+      "revision": "6f658bd00ffa52158c1c0f32244b6dd59a0360d7",
+      "url": "https://github.com/NOAA-GFDL/GFDL_atmos_cubed_sphere/blob/6f658bd00ffa52158c1c0f32244b6dd59a0360d7/docs/examples",
+      "version_basis": "Fortran helpers and README files from docs/examples at the tagged repository tree; Jupyter notebooks are not copied because they are not indexable by this server"
+    },
+    {
+      "name": "mpas-docs",
+      "path": "corpus/mpas/source",
+      "library": "mpas",
+      "version": "snapshot-69b46ed16748",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "69b46ed167481ca5732636be219c608f96b89121",
+      "url": "https://github.com/MPAS-Dev/MPAS-Documents/blob/69b46ed167481ca5732636be219c608f96b89121",
+      "version_basis": "Rolling master snapshot of MPAS-Dev/MPAS-Documents, the authoritative MPAS documentation repository; not release-certified; corresponds to MPAS-Model 8.4.2; the repository has no license file",
+      "target_release": "8.4.2"
+    },
+    {
+      "name": "mom6-docs",
+      "path": "corpus/mom6/source",
+      "library": "mom6",
+      "version": "snapshot-main",
+      "kind": "documentation",
+      "managed": true,
+      "revision": "0e9a5611a9f6c99bfea12665da3a9146183521ee",
+      "url": "https://mom6.readthedocs.io/en/main/",
+      "version_basis": "Official rolling /en/main/ documentation site (authoritative for MOM6), acquired from the rendered site (htmlzip artifact when published, polite crawl otherwise); includes the Doxygen API reference generated only on the rendered site; main branch observed at commit 0e9a5611a9f6c99bfea12665da3a9146183521ee when pinned; not release-certified"
     }
   ]
 }

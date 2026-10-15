@@ -1,0 +1,148 @@
+{
+  "dask": {
+    "repo": "dask/dask",
+    "ref": "2026.8.0",
+    "commit": "9dc535daa30d7d36d63d4a003b54342fbc7032db",
+    "version": "2026.8.0",
+    "doc_dir": "docs/source",
+    "exts": [
+      ".rst",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [
+      "LICENSE.txt"
+    ],
+    "version_basis": "Official release tag 2026.8.0; documentation source imported from the tagged repository tree; autosummary API pages are stubs in source and expand only on the rendered site",
+    "checked_at": "2026-10-15T13:59:53.049589+00:00"
+  },
+  "dask-jobqueue": {
+    "repo": "dask/dask-jobqueue",
+    "ref": "0.9.0",
+    "commit": "b91983d8192c5baccbd7dd0a358f66e0987a97ab",
+    "version": "0.9.0",
+    "doc_dir": "docs/source",
+    "exts": [
+      ".rst",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [
+      "LICENSE.txt"
+    ],
+    "version_basis": "Official release tag 0.9.0; documentation source from the tagged repository tree",
+    "checked_at": "2026-10-15T13:59:54.911903+00:00"
+  },
+  "ecflow": {
+    "repo": "ECMWF/ecFlow",
+    "ref": "5.19.0",
+    "commit": "b6c3ef73323eb0a6d82586fed080641810b11716",
+    "version": "5.19.0",
+    "doc_dir": "docs",
+    "exts": [
+      ".rst",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [
+      "LICENSE",
+      "NOTICE"
+    ],
+    "version_basis": "Official release tag 5.19.0; documentation source from the tagged repository tree, including the committed Python and REST client API pages",
+    "checked_at": "2026-10-15T14:00:18.469270+00:00"
+  },
+  "ufs-weather-model": {
+    "repo": "ufs-community/ufs-weather-model",
+    "ref": "Release/P8b",
+    "commit": "9b6b7402de2c06eaf121c4a9a4285b651a936c5d",
+    "version": "P8b",
+    "doc_dir": "doc/UsersGuide/source",
+    "exts": [
+      ".rst",
+      ".md",
+      ".txt",
+      ".inc"
+    ],
+    "licenses": [
+      "LICENSE.md"
+    ],
+    "version_basis": "Official release tag Release/P8b; Users Guide source from the tagged repository tree; the guide itself declares no version number",
+    "checked_at": "2026-10-15T14:00:22.222440+00:00"
+  },
+  "cice": {
+    "repo": "CICE-Consortium/CICE",
+    "ref": "CICE6.6.3",
+    "commit": "c734c12bfb19632cd700cb06b22c3ea62b4adeae",
+    "version": "6.6.3",
+    "doc_dir": "doc/source",
+    "exts": [
+      ".rst",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [
+      "LICENSE.pdf",
+      "COPYRIGHT.pdf"
+    ],
+    "version_basis": "Official release tag CICE6.6.3; documentation source from the tagged repository tree; BSD-3-Clause license retained as LICENSE.pdf",
+    "checked_at": "2026-10-15T14:00:26.939375+00:00"
+  },
+  "fv3": {
+    "repo": "NOAA-GFDL/GFDL_atmos_cubed_sphere",
+    "ref": "FV3-202604-public",
+    "commit": "6f658bd00ffa52158c1c0f32244b6dd59a0360d7",
+    "version": "202604",
+    "doc_dir": "docs/doc_source",
+    "exts": [
+      ".tex",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [
+      "LICENSE.md"
+    ],
+    "version_basis": "Official release tag FV3-202604-public (202604 release); LaTeX technical guide source from the tagged repository tree; Jupyter notebooks in docs/examples are not indexed",
+    "examples": {
+      "doc_dir": "docs/examples",
+      "exts": [
+        ".F90",
+        ".h",
+        ".txt",
+        ".md"
+      ],
+      "version_basis": "Example notebooks and Fortran helpers from the tagged repository tree"
+    },
+    "checked_at": "2026-10-15T14:00:29.252117+00:00"
+  },
+  "mpas": {
+    "repo": "MPAS-Dev/MPAS-Documents",
+    "ref": "master",
+    "commit": "69b46ed167481ca5732636be219c608f96b89121",
+    "version": "snapshot-69b46ed16748",
+    "target_release": "8.4.2",
+    "doc_dir": ".",
+    "exts": [
+      ".tex",
+      ".md",
+      ".txt"
+    ],
+    "licenses": [],
+    "version_basis": "Rolling master snapshot of MPAS-Dev/MPAS-Documents, the authoritative MPAS documentation repository; not release-certified; corresponds to MPAS-Model 8.4.2; the repository has no license file",
+    "checked_at": "2026-10-15T14:00:35.374934+00:00"
+  },
+  "mom6": {
+    "version": "snapshot-main",
+    "base_url": "https://mom6.readthedocs.io/en/main/",
+    "start_pages": [
+      "index.html"
+    ],
+    "path": "corpus/mom6/source",
+    "htmlzip_url": "https://mom6.readthedocs.io/_/downloads/en/main/htmlzip/",
+    "revision": "0e9a5611a9f6c99bfea12665da3a9146183521ee",
+    "url": "https://github.com/mom-ocean/MOM6",
+    "version_basis": "Official rolling /en/main/ documentation site (authoritative for MOM6), acquired from the rendered site (htmlzip artifact when published, polite crawl otherwise); includes the Doxygen API reference generated only on the rendered site; main branch observed at commit 0e9a5611a9f6c99bfea12665da3a9146183521ee when pinned; not release-certified",
+    "pages": 671,
+    "acquisition": "crawl",
+    "checked_at": "2026-10-15T16:24:16.860100+00:00"
+  }
+}

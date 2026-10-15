@@ -1,0 +1,9 @@
+\textbf{NOTE}: This option defunct and may be depracated in a future release.  vmix\_const has been superceded by CVMix.  Use of vmix\_const is not recommended.  Identical functionality is achieved in CVMix with the following namelist modifications of defaults
+\begin{itemize}
+	\item config\_use\_kpp = .false.
+	\item config\_use\_cvmix\_shear = .false.
+	\item config\_use\_cvmix\_convection = .false.
+	\item config\_use\_cvmix\_background = .true.
+\end{itemize} 
+
+Here the vertical viscosity $\nu_v$ and diffusion $\kappa_v$ are simply constant throughout the domain.  This option can be useful for testing and idealized domains but is not appropriate for real-world simulations, as the deep ocean should have much less mixing that in the boundary layer.

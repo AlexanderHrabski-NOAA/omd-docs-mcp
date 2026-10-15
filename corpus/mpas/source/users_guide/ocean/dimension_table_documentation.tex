@@ -1,0 +1,122 @@
+\chapter{Dimensions}
+\label{chap:dimensions}
+{\small
+\begin{center}
+\begin{longtable}{| p{1.0in} || p{1.0in} | p{4.0in} |}
+    \hline 
+    {\bf Name} & {\bf Units} & {\bf Description} \endfirsthead
+    \hline 
+    {\bf Name} & {\bf Units} & {\bf Description} (Continued) \endhead
+    \hline 
+    \hline 
+    nCells & -- & The number of polygons in the primary grid. \\
+    \hline
+    nCellsP1 & -- & The number of polygons in the primary grid. \\
+    \hline
+    nEdges & -- & The number of edge midpoints in either the primary or dual grid. \\
+    \hline
+    nEdgesP1 & -- & The number of edge midpoints in either the primary or dual grid. \\
+    \hline
+    maxEdges & -- & The largest number of edges any polygon within the grid has. \\
+    \hline
+    maxEdges2 & -- & Two times the largest number of edges any polygon within the grid has. \\
+    \hline
+    nVertices & -- & The total number of cells in the dual grid. Also the number of corners in the primary grid. \\
+    \hline
+    nVerticesP1 & -- & The total number of cells in the dual grid. Also the number of corners in the primary grid. \\
+    \hline
+    bnds & -- & The number of coordinate bound \\
+    \hline
+    TWO & -- & The number two as a dimension. \\
+    \hline
+    R3 & -- & The number three as a dimension. \\
+    \hline
+    FOUR & -- & The number four as a dimension. \\
+    \hline
+    FIVE & -- & The number five as a dimension. \\
+    \hline
+    SIX & -- & The number six as a dimension. \\
+    \hline
+    FIFTEEN & -- & The number 15 as a dimension. \\
+    \hline
+    TWENTYONE & -- & The number 21 as a dimension. \\
+    \hline
+    vertexDegree & -- & The number of cells or edges touching each vertex. \\
+    \hline
+    nVertLevels & -- & The number of levels in the vertical direction. All vertical levels share the same horizontal locations. \\
+    \hline
+    nVertLevelsP1 & -- & The number of interfaces in the vertical direction. \\
+    \hline
+    nPoints & -- & The number of points for AM\_pointwiseStats \\
+    \hline
+    nPointGroups & -- & The number of points groups \\
+    \hline
+    maxPointsInGroup & -- & The maximum number of points in any group. \\
+    \hline
+    nRegions & -- & Number of regions. \\
+    \hline
+    nRegionGroups & -- & Number of groups of regions. \\
+    \hline
+    maxRegionsInGroup & -- & Maximum number of regions in a group. \\
+    \hline
+    nTransects & -- & The number of transects for AM transectTransport \\
+    \hline
+    nTransectGroups & -- & Number of groups of regions. \\
+    \hline
+    maxTransectsInGroup & -- & Maximum number of regions in a group. \\
+    \hline
+    maxEdgesInTransect & -- & Max number of edges in a transect for AM transectTransport \\
+    \hline
+    nForcingGroupsMax & -- & Number of forcing groups \\
+    \hline
+    maxTidalConstituents & -- & Max number of tidal potential constituents \\
+    \hline
+    maxTidalConstituentsX2 & -- & Max number of tidal potential constituents \\
+    \hline
+    nStokesDriftWavenumbers & -- & Number of wavenumbers used to reconstruct Stokes drift depth profile \\
+    \hline
+    nSfcAreaWeightedAvgFields & -- & A number equal to or greater than the number of var arrays in the surfaceAreaWeightedAveragesAM var structure below. \\
+    \hline
+    nOceanRegions & -- & The number of regions defined within the global ocean (will eventually be moved up and used uniformly across MPAS-O. \\
+    \hline
+    nTemperatureBins & -- & The number of temperature bins to be used to span from minTemperature to maxTemperature \\
+    \hline
+    nSalinityBins & -- & The number of salinity bins to be used to span from minSalinity to maxSalinity \\
+    \hline
+    nTemperatureBinsP1 & -- & The number of temperature bin edge values to be used to span from minTemperature to maxTemperature \\
+    \hline
+    nSalinityBinsP1 & -- & The number of salinity bins edge values to be used to span from minSalinity to maxSalinity \\
+    \hline
+    nOceanRegionsTmpCensus & -- & The number of regions defined within the global ocean (will eventually be moved up and used uniformly across MPAS-O. \\
+    \hline
+    nLayerVolWeightedAvgFields & -- & A number equal to or greater than the number of var arrays in the layerVolumeWeightedAverageAM var structure below. \\
+    \hline
+    nOceanRegionsTmp & -- & The number of regions defined within the global ocean (will eventually be moved up and used uniformly across MPAS-O. \\
+    \hline
+    nZonalMeanBins & -- & Number of bins for zonal mean. \\
+    \hline
+    nZonalMeanBinsP1 & -- & Number of bins for zonal mean, plus one. \\
+    \hline
+    nMerHeatTransBins & -- & Maximum number of bins for meridional heat transport. \\
+    \hline
+    nMerHeatTransBinsP1 & -- & Maximum number of bins for meridional heat transport, plus one. \\
+    \hline
+    nParticles & -- & The total number of particles in the simlulation. \\
+    \hline
+    nBuoyancySurfaces & -- & The total number of buoyancy surfaces on which to interpolate velocity. \\
+    \hline
+    nBuoyancyLayers & -- & The number of buoyancy layers used for buoyancy coordinates. \\
+    \hline
+    nBuoyancyLayersP1 & -- & The number of interfaces between buoyancy layers used for buoyancy coordinates. \\
+    \hline
+    nMocStreamfunctionBins & -- & Maximum number of bins in South-to-North direction for moc streamfunction. \\
+    \hline
+    nMocStreamfunctionBinsP1 & -- & Maximum number of Lat bins for moc streamfunction, plus one. \\
+    \hline
+    nDepthTracerIC & \si{unitless} & The number of levels in the vertical direction for tracer initial conditions \\
+    \hline
+    nDepthEcosysIC & \si{unitless} & The number of levels in the vertical direction for ecosystem tracer initial conditions \\
+    \hline
+\end{longtable}
+\end{center}
+}

@@ -1,0 +1,32 @@
+\chapter{MPAS-Ocean Quick Start Guide}
+\label{chap:quick_start}
+
+This chapter provides MPAS-Ocean users with a quick start description of how to
+build and run the model. It is meant merely as a brief overview of the process,
+while the more detailed descriptions of each step are provided in later
+sections.
+
+In general, the build process follows the following steps.  See Chapter 
+\ref{chap:tested-configurations} for recommended versions.
+
+\begin{enumerate}
+	\item Build MPI Layer (OpenMPI, MVAPICH2, etc.)
+	\item Build serial NetCDF library
+	\item Build Parallel-NetCDF library
+	\item Build Parallel I/O library
+	\item (Optional) Build METIS library and executables
+	\item Checkout MPAS-Ocean from repository
+	\item Build ocean core (e.g.\ {\tt make CORE=ocean})
+\end{enumerate}
+
+After step 7, an executable should be created called ocean\_model. Once the executable is built, one can begin the run process as follows:
+
+\begin{enumerate}
+	\item Download a run directory from \url{http://mpas-dev.github.com}, ``MPAS-Ocean Download''
+	\item Copy or link executable to run directory.
+	\item (Optional) Edit namelist.ocean to have the proper parameters. In particular, you may change the simulation length with {\tt config\_run\_duration = '0000\_06:00:00'}, which shows {\tt DAYS\_H:M:S}.
+	\item (Optional) Create additional graph files using METIS executable (pmetis or gpmetis depending on version).  A graph file is required for each processor count you want to use.  See Section \ref{sec:metis}
+	\item Run MPAS-Ocean (e.g.\ {\tt mpirun -np 8 ocean\_model}).
+	\item If run was successful, last line of {\tt log.ocean.0000.out} shows {\tt Logging complete.}
+	\item Visualize output file and perform analysis.  Output file is typically named {\tt output.nc}.  See Chapters \ref{chap:mpas_visualization} and \ref{chap:ocean_visualization}.
+\end{enumerate}

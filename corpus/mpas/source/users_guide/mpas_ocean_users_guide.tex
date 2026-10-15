@@ -1,0 +1,135 @@
+\documentclass[11pt]{report}
+
+\usepackage{tocloft}
+\usepackage{epsf,amsmath,amsfonts}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage[pagebackref=true]{hyperref}
+\usepackage{color}
+\usepackage[hang]{caption}
+%\usepackage[hang]{subfigure}
+\usepackage{subfig}
+\usepackage{natbib}
+\usepackage{placeins}
+\usepackage{eso-pic}
+\usepackage{float}
+\usepackage{siunitx}
+
+\definecolor{black}{rgb}{0.0,0.0,0.0}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.5}
+\hypersetup{colorlinks,breaklinks,
+            linkcolor=blue,urlcolor=blue,
+            anchorcolor=black,citecolor=blue}
+
+
+\renewcommand\cftsecaftersnumb{
+\,\,
+}
+\renewcommand\cftsubsecaftersnumb{
+\,\,
+}
+\renewcommand\cftsubsubsecaftersnumb{
+\,\,
+}
+
+\setlength{\topmargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\evensidemargin}{0in}
+\setlength{\oddsidemargin}{0in}
+
+%\captionsetup{width=2in}
+\captionsetup{format=hang}
+%\captionsetup{justification=RaggedRight}
+
+\input{ocean/define_version.tex}
+
+\setlength\LTleft\parindent
+\setlength\LTright\fill
+
+\newcommand\BackgroundPic{%
+	\put(0,0){%
+		\parbox[b][\paperheight]{\paperwidth}{%
+			\centering
+			\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{ocean/figures/MPAS_LOGO_Ocean.png}%
+			\vfill
+			\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{ocean/figures/cover_V3_KE_NA37-7km_cropped_d.jpg}%
+}}}
+
+\newcommand{\inlineCode}[1]{\textbf{#1}}
+
+\newcommand{\core}{ocean}
+
+\begin{document}
+\AddToShipoutPicture*{\BackgroundPic}
+
+\title{
+\Huge MPAS-Ocean User's Guide \\
+\LARGE E3SM Version \version}
+
+\author{
+\LARGE Climate, Ocean, Sea-Ice Modeling Team\\ \\
+\LARGE Los Alamos National Laboratory
+}
+
+\date{March 4, 2024}
+
+\maketitle
+
+\input{shared/mpas_copyright.tex}
+\input{ocean/foreword.tex}
+\input{ocean/history.tex}
+
+%\tableofcontents
+
+\input{ocean/quick_start.tex}
+\input{ocean/support_policy.tex}
+
+\part{The MPAS Framework}
+\input{shared/mpas_framework_overview.tex}
+\input{shared/mpas_build_instructions.tex}
+\input{shared/mpas_grid_description.tex}
+\input{shared/mpas_io.tex}
+\input{shared/mpas_visualization.tex}
+
+\part{MPAS-Ocean}
+\input{ocean/core_intro.tex}
+\input{ocean/tracers.tex}
+
+% Grid generation is not included in MPAS release 1.0.
+% In a future release, describe here ocean-specific grid
+% generation, currently the basin.F program.
+%\input{ocean/mpas_grid_generation.tex}
+
+% mrp 2018/4/20.  This is an old command for "forward mode" documentation.
+% Need to remove soon.
+\newcommand{\mode}{forward}
+
+\input{ocean/namelist_table_documentation.tex}
+\input{ocean/variable_table_documentation.tex}
+
+\input{ocean/test_case_descriptions.tex}
+
+%\input{ocean/global_statistics.tex}
+
+\input{ocean/visualization.tex}
+\input{ocean/E3SM_coupling.tex}
+%\input{ocean/troubleshooting.tex}
+\input{ocean/tested_setups.tex}
+%\input{ocean/knownissues.tex}
+
+\part{Bibliography}
+\bibliographystyle{shared/ametsoc}
+\bibliography{shared/mpas_shared,ocean/mpas_ocean}
+
+\part{Appendices}
+\appendix
+\input{ocean/namelist_section_documentation.tex}
+\input{ocean/variable_section_documentation.tex}
+
+\end{document}
+
+
+

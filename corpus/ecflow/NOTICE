@@ -1,0 +1,32 @@
+
+The following third-party software is included in the ecFlow source tree, and is licensed as described below.
+
+
+cereal (C++ header-only serialisation library)
+https://uscilab.github.io/cereal/
+Licensed under the BSD license, included at `3rdparty/cereal/`.
+
+
+cpp-httplib (HTTP/HTTPS C++ header-only server and client library)
+https://github.com/yhirose/cpp-httplib
+Licensed under the MIT license, included at `3rdparty/cpp-httplib/`.
+
+
+nlohmann-json (C++ header-only library for JSON parsing and serialisation)
+https://github.com/nlohmann/json
+Licensed under the MIT license, included at `3rdparty/json/`.
+
+
+Certificate.hpp (C++ header-only library for handling X.509 certificates)
+https://gist.github.com/nathan-osman/5041136
+Licensed under the MIT license, included at `libs/rest/test/Certificate.hpp`.
+
+
+LazyTextEdit (Qt-based text editor that lazily loads data from disk when necessary)
+https://github.com/Andersbakken/LazyTextEdit
+Licensed under the Apache License Version 2.0, included at `Viewer/ecflowUI/src/TextPager/`.
+
+
+spinning_wheel.gif
+Generated using the website http://www.ajaxload.info/
+Freely licensed, as described there.
