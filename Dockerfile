@@ -32,6 +32,11 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN uv sync --frozen --no-install-project
 COPY --from=build --chown=appuser:appuser /app/data/nuopc.sqlite3 data/nuopc.sqlite3
 COPY --chown=appuser:appuser src/server.py src/knowledge.py ./src/
+# Compatibility shim: existing MCP client configs launch `python server.py`
+# from /app. Keep that path working after the modules moved under src/.
+RUN echo 'import sys; sys.path.insert(0, "/app/src")' > server.py \
+ && echo 'from server import mcp' >> server.py \
+ && echo 'if __name__ == "__main__": mcp.run(transport="stdio")' >> server.py
 
 # DOCS_MCP_DB is already the ROOT/data/nuopc.sqlite3 default in server.py;
 # set it explicitly so a bind-mount override is obvious.

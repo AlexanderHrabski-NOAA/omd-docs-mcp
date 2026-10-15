@@ -12,6 +12,10 @@ import unittest
 
 IMAGE = "omd-mcp"
 RUN = ["docker", "run", "-i", "--rm", "--read-only", "--pull=never", "--memory=512m", IMAGE]
+# Existing MCP client configs launch the server as `python server.py` from the
+# image workdir (via `docker exec -i omd-mcp python server.py`), which overrides
+# the ENTRYPOINT. The /app/server.py shim must keep that path working.
+LEGACY_RUN = RUN + ["python", "server.py"]
 EXCHANGE_TIMEOUT = 60
 
 INIT = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -60,9 +64,11 @@ class DockerMcpSmoke(unittest.TestCase):
         if shutil.which("docker") is None:
             self.skipTest("docker CLI not available")
 
-    def _exchange(self):
+    def _exchange(self, command=None, requests=None, expected_ids=None):
+        requests = REQUESTS if requests is None else requests
+        expected_ids = EXPECTED_IDS if expected_ids is None else set(expected_ids)
         proc = subprocess.Popen(
-            RUN, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            command or RUN, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, text=True)
         responses = {}
         stdout_lines = queue.Queue()
@@ -96,11 +102,11 @@ class DockerMcpSmoke(unittest.TestCase):
             )
 
         try:
-            for msg in REQUESTS:
+            for msg in requests:
                 proc.stdin.write(json.dumps(msg) + "\n")
                 proc.stdin.flush()
             # Read one response per request id; do NOT close stdin first.
-            deadline_ids = set(EXPECTED_IDS)
+            deadline_ids = set(expected_ids)
             while deadline_ids:
                 try:
                     line = stdout_lines.get(timeout=EXCHANGE_TIMEOUT)
@@ -205,6 +211,22 @@ class DockerMcpSmoke(unittest.TestCase):
         ccpp_scm = _payload(resp[10]["result"])
         self.assertIn("collections", ccpp_scm)
         self.assertIn("ccpp-scm", ccpp_scm["collections"])
+
+    def test_legacy_server_py_launch(self):
+        # Client configs (and `docker exec -i omd-mcp python server.py`) launch
+        # the entrypoint-overriding shim; it must handshake and serve dask.
+        requests = [INIT, NOTIF,
+                    call(20, "search_docs", {"query": "delayed", "library": "dask", "limit": 2}),
+                    call(21, "list_collections", {})]
+        resp = self._exchange(LEGACY_RUN, requests, {20, 21})
+        hits = _payload(resp[20]["result"])
+        hits = hits.get("result", hits) if isinstance(hits, dict) else hits
+        self.assertTrue(hits, "legacy launch: search_docs('delayed', dask) found nothing")
+        self.assertTrue(all(h["library"] == "dask" for h in hits))
+        rows = _payload(resp[21]["result"])
+        rows = rows if isinstance(rows, list) else rows.get("result", [])
+        self.assertTrue(any(r["library"] == "dask" for r in rows),
+                        "legacy launch: list_collections missing dask")
 
 
 if __name__ == "__main__":
