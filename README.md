@@ -1,10 +1,9 @@
 # OMD Library Docs MCP Server
 
 A local, read-only documentation retrieval server for GitHub Copilot Agent
-mode. **omd** indexes seventeen curated collections — ESMF/NUOPC, Kokkos, Kokkos
-Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM, PyTorch,
-PyTorch Forecasting, Dask, dask-jobqueue, ecFlow, UFS Weather Model, MOM6,
-CICE, FV3 and MPAS — and retrieves complete
+mode and Claude Code. **omd** indexes nine curated collections — ESMF/NUOPC,
+Kokkos, Kokkos Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM,
+PyTorch and PyTorch Forecasting — and retrieves complete
 manual sections, Fortran routines and C++ examples with release provenance
 and citations. It separates API requirements, examples, framework
 implementation, and your application code.
@@ -83,7 +82,7 @@ Two upstream example references (`apply_householder.cpp`, `householder.cpp`) cou
 not be resolved in the release checkout. They are recorded in manifest provenance
 and returned as `missing_included_code` on affected sections.
 
-Ask Copilot:
+Ask your agent:
 
 > Use get_kokkos_context to find the documentation for KokkosBlas::gemm. Read the
 > full section and examples, verify execution space and layout requirements,
@@ -111,7 +110,7 @@ snapshot**, not certified against any single JEDI software release; its
 against the version you actually build. Neither repo uses `literalinclude`, so no
 included-code retrieval applies to these collections.
 
-Ask Copilot:
+Ask your agent:
 
 > Use get_nws_context to find the standard environment variables and the
 > compath.py utility. Read the full section and cite the RST line range before
@@ -129,7 +128,7 @@ release. Verify conventions against the CCPP framework actually built in your
 environment. Two `literalinclude` scheme templates are indexed as
 `included_code` and can be retrieved with `get_routine`.
 
-Ask Copilot:
+Ask your agent:
 
 > Use get_ccpp_context to find the scheme template guidance for adding a new
 > CCPP physics scheme. Read the full section, retrieve the included templates,
@@ -144,7 +143,7 @@ conventions against the SCM framework actually built in your environment. Three
 `literalinclude` case header/namelist targets are indexed as `included_code` and
 can be retrieved with `get_routine`.
 
-Ask Copilot:
+Ask your agent:
 
 > Use get_ccpp_scm_context to find the case setup guidance for SCM runs. Read
 > the full section, retrieve the included case headers/namelists, and compare
@@ -154,17 +153,32 @@ Ask Copilot:
 
 Build the image from this repository with Docker and internet access. The build
 fetches versioned PyTorch documentation and regenerates the SQLite index;
-Copilot then runs the server in a read-only container:
+your MCP client then runs the server in a read-only container:
 
 ```sh
 docker build -t omd-mcp .
 ```
 
-`.vscode/mcp.json` launches `docker run -i --rm --read-only --pull=never
---memory=512m omd-mcp`. Enable it from `MCP: List Servers`. Docker and internet
-access during the build are required. To run the server as a named container
-(`omd-mcp`) instead — building the image on first use and clearing any stale
-name conflict — use `./run-omd-mcp.sh` (`--rebuild` or `--stop` supported).
+Then enable the server in your client.
+
+**GitHub Copilot.** `.vscode/mcp.json` launches `docker run -i --rm --read-only
+--pull=never --memory=512m omd-mcp`. Enable it from `MCP: List Servers`.
+
+**Claude Code.** Register the same command as a stdio server:
+
+```sh
+claude mcp add --scope user omd -- docker run -i --rm --read-only --pull=never --memory=512m omd-mcp
+```
+
+`--scope user` makes the server available in every project; use `--scope project`
+to write a shareable `.mcp.json` into the current repository instead. Run `/mcp`
+in a Claude Code session to confirm that **omd** is connected and its tools are
+listed. The VS Code extension uses the same MCP configuration as the CLI.
+
+Docker and internet access during the build are required. To run the server as
+a named container (`omd-mcp`) instead — building the image on first use and
+clearing any stale name conflict — use `./run-omd-mcp.sh` (`--rebuild` or
+`--stop` supported).
 
 **Refreshing the index.** The container index is rebuilt during each Docker
 build. To regenerate the local development index:
@@ -191,9 +205,11 @@ The bundled sources let you index without downloading manuals again; fetching
 PyTorch documentation requires internet access. Python package installation
 also requires internet access. No ESMF build is needed for indexing.
 
-Start **omd** from `.vscode/mcp.json` or `MCP: List Servers`. Enable its tools
-in Copilot Agent mode. To select a specific tool, type `#` and select it from
-Copilot autocomplete. Try:
+Start **omd** from `.vscode/mcp.json` or `MCP: List Servers` (Copilot), or
+register it with `claude mcp add` as above (Claude Code). In Copilot Agent mode,
+enable its tools; to select a specific tool, type `#` and select it from
+Copilot autocomplete. In Claude Code, name the tool in your prompt or let the
+agent choose; tools appear as `mcp__omd__<tool>`. Try:
 
 > Use get_nuopc_context with focus driver to inspect how NUOPC_DriverAddComp is
 > used in ESMF 8.9.1. Read all applicable API overloads and the complete example
@@ -205,14 +221,16 @@ For a cap:
 > advertisement/realization. Read the API and lifecycle sections plus release
 > examples. Inspect my existing cap before editing; compile and run its tests.
 
-Copilot still uses its selected model. Retrieved excerpts can be transmitted
-as part of Copilot's context; this is not an offline coding-agent workflow.
+The agent still uses its selected model. Retrieved excerpts can be transmitted
+as part of the agent's context; this is not an offline coding-agent workflow.
 
 ## Use in your actual model repository
 
 The included `${workspaceFolder}` configuration assumes this MCP project itself
-is open. When working on your model, merge the following into **your model's**
-`.vscode/mcp.json`, preserving its existing servers:
+is open. When working on your model, add the server to **your model's**
+configuration, preserving its existing servers.
+
+**GitHub Copilot** — merge the following into your model's `.vscode/mcp.json`:
 
 ```json
 {
@@ -226,17 +244,38 @@ is open. When working on your model, merge the following into **your model's**
 }
 ```
 
+**Claude Code** — merge the following into your model's `.mcp.json` (or register
+the server once with `--scope user` as shown in Quick start):
+
+```json
+{
+  "mcpServers": {
+    "omd": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "--read-only", "--pull=never", "--memory=512m", "omd-mcp"]
+    }
+  }
+}
+```
+
+Claude Code asks you to approve project-scoped servers the first time it loads
+them. A project entry named `omd` takes precedence over a user-scope entry of
+the same name.
+
 The image must be built from this repository first (tag it on the target
 machine with `docker build -t omd-mcp /absolute/path/to/docs-mcp`), then
-any workspace can point `mcp.json` at the tag. `docker` must be on VS Code's
-PATH; restart VS Code after installation. VS Code launches the stdio container;
-there is no browser endpoint or separate manual server startup step. The uv
-`command`/`args` form still works for developers who prefer a local Python env.
+any workspace can point its configuration at the tag. `docker` must be on the
+client's PATH; restart VS Code after installation. The client launches the
+stdio container; there is no browser endpoint or separate manual server startup
+step. The uv `command`/`args` form still works for developers who prefer a
+local Python env.
 
 Merge `.github/copilot-instructions.md` into the corresponding file in your model
-repository. This is important: instructions inside this MCP project alone do
-not become repository instructions for another workspace. They direct the agent
-to retrieve authoritative evidence, compare overloads, check lifecycle assumptions,
+repository (Copilot), or into your repository's `CLAUDE.md` (Claude Code). This
+is important: instructions inside this MCP project alone do not become
+repository instructions for another workspace. They direct the agent to
+retrieve authoritative evidence, compare overloads, check lifecycle assumptions,
 and run your project's build/tests. Instructions steer behavior; they cannot
 force the agent to comply or guarantee correct code.
 
@@ -452,9 +491,9 @@ formulas are not extracted; consult the original linked pages when needed. No li
 as API facts; lifecycle references are retrieved from manuals.
 
 All indexed text is stored locally. Tools are read-only and do not compile code,
-run tests, edit your repository or access the network. Copilot performs those
-programming actions in your workspace, under its normal controls. Your source
-and index may contain confidential code; keep them protected accordingly.
+run tests, edit your repository or access the network. The coding agent performs
+those programming actions in your workspace, under its normal controls. Your
+source and index may contain confidential code; keep them protected accordingly.
 
 ## Sources
 
@@ -465,6 +504,7 @@ and index may contain confidential code; keep them protected accordingly.
 - [8.9.1 C reference](https://earthsystemmodeling.org/docs/release/ESMF_8_9_1/ESMC_crefdoc/)
 - [Pinned ESMF source](https://github.com/esmf-org/esmf/tree/bd03a249df907464fdad91b7c43985dedbc472c7)
 - [VS Code MCP configuration](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+- [Claude Code MCP documentation](https://docs.claude.com/en/docs/claude-code/mcp)
 
 - [Kokkos releases](https://github.com/kokkos/kokkos/releases)
 - [Kokkos documentation](https://kokkos.org/kokkos-core-wiki/)
