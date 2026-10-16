@@ -2,6 +2,7 @@
 # Build:  docker build -t omd-mcp .
 # Run:    docker run -i --rm --read-only --memory=512m omd-mcp
 FROM python:3.12-slim AS build
+ARG INCLUDE_PYTORCH=0
 
 # uv resolves the pinned dependency set from uv.lock.
 RUN pip install --no-cache-dir uv
@@ -14,20 +15,15 @@ COPY pyproject.toml uv.lock ./
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN uv sync --frozen --no-install-project
 
-# Build a fresh index from the catalog and bundled sources. PyTorch and MOM6
-# docs are fetched during this build (PyTorch from pinned version paths, MOM6
-# from its official /en/main/ site, and grib2io from its pinned release tag).
+# Build a fresh index from the catalog and bundled sources. PyTorch docs are
+# opt-in; MOM6 and grib2io are fetched from their pinned official sources.
 # The weather lock lets fetch_weather skip
 # re-acquiring any collection already present in the build context; a clean
 # clone has no corpus/mom6, so there the crawl still runs.
 COPY corpus.catalog.json weather-lock.json ./
 COPY src/ ./src/
 COPY corpus/ ./corpus/
-RUN if [ -f corpus/pytorch/source/index.html ] && [ -f corpus/pytorch-forecasting/source/index.html ]; then \
-        echo 'Using bundled PyTorch documentation'; \
-    else \
-        python src/fetch_pytorch.py; \
-    fi \
+RUN if [ "$INCLUDE_PYTORCH" = "1" ]; then python src/fetch_pytorch.py; fi \
     && python src/fetch_weather.py --only mom6,grib2io \
     && python src/ingest.py \
     && python src/build_embeddings.py --cache-dir /app/model-cache

@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        INCLUDE_PYTORCH: ${INCLUDE_PYTORCH:-0}
     container_name: omd-mcp
     stdin_open: true
     tty: false

@@ -16,4 +16,6 @@ standards-lock.json
 *.egg-info/
 .vscode
 README.md
+corpus/pytorch/
+corpus/pytorch-forecasting/
 data/.gitkeep

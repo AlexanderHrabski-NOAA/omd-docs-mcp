@@ -1,9 +1,10 @@
 # OMD Library Docs MCP Server
 
 A local, read-only documentation retrieval server for GitHub Copilot Agent
-mode and Claude Code. **omd** indexes eighteen curated collections — ESMF/NUOPC,
+mode and Claude Code. **omd** indexes sixteen collections by default, with two
+optional PyTorch collections — ESMF/NUOPC,
 Kokkos, Kokkos Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM,
-PyTorch, PyTorch Forecasting, grib2io, Dask, dask-jobqueue, ecFlow, UFS Weather
+grib2io, Dask, dask-jobqueue, ecFlow, UFS Weather
 Model, MOM6, CICE, FV3 and MPAS — and retrieves complete
 manual sections, Fortran routines and C++ examples with release provenance
 and citations. It separates API requirements, examples, framework
@@ -17,8 +18,9 @@ changes. This replaces the earlier general PDF/Ollama server.
 
 ESMF, Kokkos, standards, JEDI, CCPP, Dask, dask-jobqueue, ecFlow, UFS, CICE,
 FV3 and MPAS source snapshots are bundled in the
-repository. PyTorch and PyTorch Forecasting HTML pages are fetched from their
-versioned documentation paths, and the MOM6 site is crawled from
+repository. PyTorch and PyTorch Forecasting are optional collections; enable
+them explicitly during the Docker build to fetch their versioned HTML docs.
+The MOM6 site is crawled from
 `https://mom6.readthedocs.io/en/main/`, while building the Docker image. The
 generated `corpus.json` manifest and SQLite index are build artifacts, not
 committed inputs.
@@ -32,8 +34,8 @@ committed inputs.
 | `jedi` | JEDI data assimilation documentation, develop commit `7cd222915252711893bf341bc1b67ffef3b2824a`, matching RTD `/en/latest/` | `snapshot-7cd222915252` | 1900 |
 | `ccpp` | CCPP technical documentation (`NCAR/ccpp-doc` main commit `a2f65334fda991fb7aa6a37716c003533529370e`), matching RTD `/en/latest/` | `snapshot-a2f65334fda9` | 140 |
 | `ccpp-scm` | CCPP Single Column Model (SCM) technical guide (`NCAR/ccpp-scm` main commit `a52680b013066e0f3135d63ae587ced18a434e86`), matching RTD `/en/latest/` | `snapshot-a52680b01306` | 95 |
-| `pytorch` | Complete PyTorch HTML docs under `https://docs.pytorch.org/docs/2.14/` | `2.14` | generated during build |
-| `pytorch-forecasting` | Complete PyTorch Forecasting HTML docs under `https://pytorch-forecasting.readthedocs.io/en/v1.0.0/` | `1.0.0` | generated during build |
+| `pytorch` | Optional: complete PyTorch HTML docs under `https://docs.pytorch.org/docs/2.14/` | `2.14` | opt-in build |
+| `pytorch-forecasting` | Optional: complete PyTorch Forecasting HTML docs under `https://pytorch-forecasting.readthedocs.io/en/v1.0.0/` | `1.0.0` | opt-in build |
 | `dask` | Dask documentation source at release tag `2026.8.0` (commit `9dc535daa30d`); autosummary API pages are stubs in source and expand only on the rendered site | `2026.8.0` | bundled |
 | `dask-jobqueue` | dask-jobqueue documentation source at release tag `0.9.0` (commit `b91983d8192c`) | `0.9.0` | bundled |
 | `ecflow` | ecFlow documentation source at release tag `5.19.0` (commit `b6c3ef73323e`), including the committed Python/REST client API pages | `5.19.0` | bundled |
@@ -169,12 +171,15 @@ Ask your agent:
 ## Quick start
 
 Build the image from this repository with Docker and internet access. The build
-fetches versioned PyTorch documentation and regenerates the SQLite index;
+fetches the weather docs and regenerates the SQLite index;
 your MCP client then runs the server in a read-only container:
 
 ```sh
 docker compose up -d --build
 ```
+
+PyTorch documentation can be included on demand with
+`INCLUDE_PYTORCH=1 docker compose up -d --build`.
 
 Then enable the server in your client.
 
@@ -199,7 +204,9 @@ with `docker compose down`. The legacy `./run-omd-mcp.sh` launcher is also
 available.
 
 **Refreshing the index.** The container index is rebuilt during each Docker
-build. To regenerate the local development index:
+build. PyTorch collections are skipped by default; set
+`INCLUDE_PYTORCH=1` to fetch and index both large collections. To regenerate
+the local development index:
 
 ```sh
 uv run src/build_manifest.py
@@ -215,18 +222,20 @@ Clone this repository, open it in VS Code, and run in its terminal:
 
 ```sh
 uv sync
-uv run src/fetch_pytorch.py
 uv run src/fetch_weather.py --only grib2io
 uv run src/ingest.py
 uv run src/build_embeddings.py
 ```
 
 The bundled sources let you index without downloading manuals again; fetching
-PyTorch and grib2io documentation and downloading the compact embedding model
+grib2io documentation and downloading the compact embedding model
 require internet access. Python package installation also requires internet
 access. `build_embeddings.py` adds the local semantic index alongside FTS5;
 search continues to use FTS5 if vectors have not been generated. No ESMF build
 is needed for indexing.
+
+For a local development index with PyTorch collections, run
+`uv run src/fetch_pytorch.py` before `uv run src/ingest.py`.
 
 Start **omd** from `.vscode/mcp.json` or `MCP: List Servers` (Copilot), or
 register it with `claude mcp add` as above (Claude Code). In Copilot Agent mode,
@@ -438,8 +447,8 @@ uv run src/fetch_standards.py --latest # newest NWS release tag, current JEDI de
 uv run src/ingest.py
 ```
 
-PyTorch and PyTorch Forecasting docs (requires internet; fetched from the
-version-pinned documentation paths):
+Optional PyTorch and PyTorch Forecasting docs (requires internet; fetched from
+the version-pinned documentation paths):
 
 ```sh
 uv run src/fetch_pytorch.py
@@ -476,7 +485,7 @@ on them.
 
 For Git-backed collections, `--latest` records new commits/version labels in
 the lock file; it never happens automatically. PyTorch documentation remains
-fixed to the configured versioned site paths.
+fixed to the configured versioned site paths and is fetched only when requested.
 Ingestion rebuilds SQLite in a transaction: failed imports preserve the previous
 index. Empty sources and wrong-version entries are rejected. Stable IDs depend
 on source name, title, location and content; re-search after a rebuild changes IDs.
