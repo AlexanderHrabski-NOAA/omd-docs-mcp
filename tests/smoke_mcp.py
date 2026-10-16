@@ -17,7 +17,7 @@ async def main():
         manifest.write_text(json.dumps({'sources':[{'name':'manual','path':'manual.html','kind':'documentation','version':'8.9.1'},
             {'name':'cap','path':'cap.F90','kind':'example','version':'8.9.1'}]}))
         db=root/'index.sqlite3';build(manifest,db)
-        params=StdioServerParameters(command=sys.executable,args=[str(Path('server.py').resolve())],env={**os.environ,'DOCS_MCP_DB':str(db)})
+        params=StdioServerParameters(command=sys.executable,args=[str(Path('src/server.py').resolve())],env={**os.environ,'DOCS_MCP_DB':str(db)})
         async with stdio_client(params) as (read,write):
             async with ClientSession(read,write) as session:
                 await session.initialize(); tools=await session.list_tools()
@@ -48,6 +48,12 @@ async def main():
                 ccpp_scm=await call('get_ccpp_scm_context',{'query':'case setup'})
                 assert 'collections' in ccpp_scm and 'ccpp-scm' in ccpp_scm['collections']
                 assert ccpp_scm['collections']['ccpp-scm']==[]
+                # Weather/workflow libraries route through the generic tools; the
+                # synthetic corpus has no such units, so an accepted label returns [].
+                for weather_library in ('dask','ecflow','mom6','mpas','fv3','cice','ufs-weather-model','dask-jobqueue'):
+                    empty=await call('search_docs',{'query':'namelist','library':weather_library})
+                    empty=empty.get('result',empty) if isinstance(empty,dict) else empty
+                    assert empty==[],weather_library
                 bad=await session.call_tool('search_docs',{'query':'NUOPC_CompDerive','version':'8.8.0'});assert bad.isError
             print('All thirteen MCP tools passed real stdio smoke test')
 

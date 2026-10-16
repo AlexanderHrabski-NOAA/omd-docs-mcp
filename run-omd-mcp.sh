@@ -11,7 +11,7 @@
 #   ./run-omd-mcp.sh --stop     # stop and remove the named container
 #
 # While it is running, connect a stdio session with:
-#   docker exec -i omd-mcp python server.py
+#   docker exec -i omd-mcp python src/server.py
 # (that reuses the named container instead of starting another one).
 set -euo pipefail
 

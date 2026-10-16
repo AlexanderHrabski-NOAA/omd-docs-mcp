@@ -13,11 +13,15 @@ COPY pyproject.toml uv.lock ./
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN uv sync --frozen --no-install-project
 
-# Build a fresh index from the catalog and bundled sources. PyTorch docs are
-# fetched from their pinned version paths during this build.
-COPY corpus.catalog.json build_manifest.py fetch_pytorch.py ingest.py knowledge.py ./
+# Build a fresh index from the catalog and bundled sources. PyTorch and MOM6
+# docs are fetched during this build (PyTorch from pinned version paths, MOM6
+# from its official /en/main/ site). The weather lock lets fetch_weather skip
+# re-acquiring any collection already present in the build context; a clean
+# clone has no corpus/mom6, so there the crawl still runs.
+COPY corpus.catalog.json weather-lock.json ./
+COPY src/ ./src/
 COPY corpus/ ./corpus/
-RUN python fetch_pytorch.py && python ingest.py
+RUN python src/fetch_pytorch.py && python src/fetch_weather.py --only mom6 && python src/ingest.py
 
 FROM python:3.12-slim AS runtime
 RUN pip install --no-cache-dir uv \
@@ -27,7 +31,12 @@ COPY pyproject.toml uv.lock ./
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN uv sync --frozen --no-install-project
 COPY --from=build --chown=appuser:appuser /app/data/nuopc.sqlite3 data/nuopc.sqlite3
-COPY --chown=appuser:appuser server.py knowledge.py ./
+COPY --chown=appuser:appuser src/server.py src/knowledge.py ./src/
+# Compatibility shim: existing MCP client configs launch `python server.py`
+# from /app. Keep that path working after the modules moved under src/.
+RUN echo 'import sys; sys.path.insert(0, "/app/src")' > server.py \
+ && echo 'from server import mcp' >> server.py \
+ && echo 'if __name__ == "__main__": mcp.run(transport="stdio")' >> server.py
 
 # DOCS_MCP_DB is already the ROOT/data/nuopc.sqlite3 default in server.py;
 # set it explicitly so a bind-mount override is obvious.
@@ -36,4 +45,4 @@ ENV DOCS_MCP_DB=/app/data/nuopc.sqlite3 \
     PYTHONUNBUFFERED=1
 
 USER appuser
-ENTRYPOINT ["python", "server.py"]
+ENTRYPOINT ["python", "src/server.py"]

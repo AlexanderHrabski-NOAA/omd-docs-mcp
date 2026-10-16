@@ -5,7 +5,17 @@ __pycache__/
 corpus.json
 corpus/pytorch/
 corpus/pytorch-forecasting/
+corpus/mom6/
 data/*
 !data/.gitkeep
 build/
 dist/
+
+docs/superpowers/
+
+.superpowers/
+.vscode/
+specs/
+.specify/
+.agents/
+

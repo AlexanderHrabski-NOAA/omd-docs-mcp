@@ -1,0 +1,420 @@
+Development Guidelines
+======================
+
+Dask is a community maintained project.  We welcome contributions in the form
+of bug reports, documentation, code, design proposals, and more.
+This page provides resources on how best to contribute.
+
+.. note:: Dask strives to be a welcoming community of individuals with diverse
+   backgrounds. For more information on our values, please see our
+   `code of conduct
+   <https://github.com/dask/governance/blob/main/code-of-conduct.md>`_
+   and
+   `diversity statement <https://github.com/dask/governance/blob/main/diversity.md>`_
+
+Where to ask for help
+---------------------
+
+Dask conversation happens in the following places:
+
+#.  `Dask Discourse forum`_: for usage questions and general discussion
+#.  `Stack Overflow #dask tag`_: for usage questions
+#.  `GitHub Issue Tracker`_: for discussions around new features or established bugs
+#.  `Dask Community Slack`_: for real-time discussion
+
+For usage questions and bug reports we prefer the use of Discourse, Stack Overflow
+and GitHub issues over Slack chat.  Discourse, GitHub and Stack Overflow are more easily
+searchable by future users, so conversations had there can be useful to many more people
+than just those directly involved.
+
+.. _`Dask Discourse forum`: https://dask.discourse.group
+.. _`Stack Overflow  #dask tag`: https://stackoverflow.com/questions/tagged/dask
+.. _`GitHub Issue Tracker`: https://github.com/dask/dask/issues/
+.. _`Dask Community Slack`: https://join.slack.com/t/dask/shared_invite/zt-mfmh7quc-nIrXL6ocgiUH2haLYA914g
+
+
+Separate Code Repositories
+--------------------------
+
+Dask maintains code and documentation in a few git repositories hosted on the
+GitHub ``dask`` organization, https://github.com/dask.  This includes the primary
+repository and several other repositories for different components.  A
+non-exhaustive list follows:
+
+*  https://github.com/dask/dask: The main code repository holding parallel
+   algorithms, the single-machine scheduler, and most documentation
+*  https://github.com/dask/distributed: The distributed memory scheduler
+*  https://github.com/dask/dask-ml: Machine learning algorithms
+*  https://github.com/dask/s3fs: S3 Filesystem interface
+*  https://github.com/dask/gcsfs: GCS Filesystem interface
+*  https://github.com/dask/hdfs3: Hadoop Filesystem interface
+*  ...
+
+Git and GitHub can be challenging at first.  Fortunately good materials exist
+on the internet.  Rather than repeat these materials here, we refer you to
+pandas' documentation and links on this subject at
+https://pandas.pydata.org/docs/dev/development/contributing.html
+
+
+Issues
+------
+
+The community discusses and tracks known bugs and potential features in the
+`GitHub Issue Tracker`_.  If you have a new idea or have identified a bug, then
+you should raise it there to start public discussion.
+
+If you are looking for an introductory issue to get started with development,
+then check out the `"good first issue" label`_, which contains issues that are good
+for starting developers.  Generally, familiarity with Python, NumPy, pandas, and
+some parallel computing are assumed. These issues often spell out exactly what needs
+to be done and are a great way to start to get familiar with the codebase and 
+contribution process. As these issues are intended to be learning oriented we ask
+that you do not solve these with automated tools.
+
+.. _`"good first issue" label`: https://github.com/dask/dask/labels/good%20first%20issue
+
+We strongly encourage discussion of issues before work is done on them. We generally follow
+lazy consensus when implementing issues to avoid bottlenecks, but gathering some feedback and 
+giving opportunity for discussion is important. Iterating on a design before beginning 
+implementation can help save time when it comes to code review and make it more likely a 
+Pull Request will be accepted.
+
+Development Environment
+-----------------------
+
+Download code
+~~~~~~~~~~~~~
+
+Make a fork of the main `Dask repository <https://github.com/dask/dask>`_ and
+clone the fork::
+
+   git clone https://github.com/<your-github-username>/dask.git
+   cd dask
+
+You should also pull the latest git tags (this ensures ``pip``'s dependency resolver
+can successfully install Dask)::
+
+   git remote add upstream https://github.com/dask/dask.git
+   git pull upstream main --tags
+
+Contributions to Dask can then be made by submitting pull requests on GitHub.
+
+.. _develop-install:
+
+Install
+~~~~~~~
+
+From the top level of your cloned Dask repository you can deploy and test a
+local version of Dask, along with all necessary dependencies, using
+pixi_.
+
+Pixi uses lockfiles to freeze the installed version of all dependencies.
+To update the lockfile::
+
+   pixi update
+
+.. _pixi: https://pixi.prefix.dev/
+
+
+Run Tests
+~~~~~~~~~
+
+Dask uses pytest_ for testing. You can run tests from the main dask directory
+as follows::
+
+   pixi run test
+
+You can pass arbitrary pytest parameters to the command; e.g.::
+
+   pixi run test dask/tests/test_base.py -k persist
+
+pytest-xdist can be used to run tests in parallel::
+
+   pixi run test -n auto
+
+Test in parallel, with coverage, and including slow tests::
+
+   pixi run test-ci
+
+Generate a local coverage report after running ``test-ci``::
+
+   pixi run coverage html
+
+Run doctests::
+   
+   pixi run doctest
+
+There are several variant environments for testing, against obsolete but
+still supported versions of dependencies, as well as against variant and
+experimental configurations::
+
+   pixi run -e mindeps-non-optional test-ci
+   pixi run -e mindeps-optional test-ci
+   pixi run -e mindeps-array test-ci
+   pixi run -e mindeps-dataframe test-ci
+   pixi run -e mindeps-distributed test-ci
+   pixi run -e py310 test-ci
+   pixi run -e py311 test-ci
+   pixi run -e py312 test-ci
+   pixi run -e py313 test-ci
+   pixi run -e py314 test-ci
+   pixi run -e py314t test-ci
+   pixi run -e nightly test-ci
+
+Note that, besides Python versions, these variant environments also test a
+matrix of different versions of NumPy, Pandas, and PyArrow. See ``pixi.toml``
+for details.
+
+There are also specialty test tasks::
+
+   pixi run test-spark
+   pixi run -e <any environment with NumPy> test-array-expr
+
+.. _pytest: https://docs.pytest.org/en/latest/
+
+
+Contributing to Code
+--------------------
+
+Dask maintains development standards that are similar to most PyData projects. These
+standards include language support, testing, documentation, and style.
+
+Python Versions
+~~~~~~~~~~~~~~~
+
+Dask supports Python versions 3.10 to 3.14.
+Name changes are handled by the :file:`dask/compatibility.py` file.
+
+.. _develop-test:
+
+Test
+~~~~
+
+Dask employs extensive unit tests to ensure correctness of code both for today
+and for the future.  Test coverage is expected for all code contributions.
+
+Tests are written in a py.test style with bare functions:
+
+.. code-block:: python
+
+   def test_fibonacci():
+       assert fib(0) == 0
+       assert fib(1) == 0
+       assert fib(10) == 55
+       assert fib(8) == fib(7) + fib(6)
+
+       for x in [-3, 'cat', 1.5]:
+           with pytest.raises(ValueError):
+               fib(x)
+
+These tests should compromise well between covering all branches and fail cases
+and running quickly (slow test suites get run less often).
+
+Tests run automatically on GitHub Actions on every push to every pull
+request on GitHub.
+
+Tests are organized within the various modules' subdirectories::
+
+    dask/array/tests/test_*.py
+    dask/bag/tests/test_*.py
+    dask/bytes/tests/test_*.py
+    dask/dataframe/tests/test_*.py
+    dask/diagnostics/tests/test_*.py
+
+For the Dask collections like Dask Array and Dask DataFrame, behavior is
+typically tested directly against the NumPy or pandas libraries using the
+``assert_eq`` functions:
+
+.. code-block:: python
+
+   import numpy as np
+   import dask.array as da
+   from dask.array.utils import assert_eq
+
+   def test_aggregations():
+       rng = np.random.default_rng()
+       nx = rng.random(100)
+       dx = da.from_array(nx, chunks=(10,))
+
+       assert_eq(nx.sum(), dx.sum())
+       assert_eq(nx.min(), dx.min())
+       assert_eq(nx.max(), dx.max())
+       ...
+
+This technique helps to ensure compatibility with upstream libraries and tends
+to be simpler than testing correctness directly.  Additionally, by passing Dask
+collections directly to the ``assert_eq`` function rather than call compute
+manually, the testing suite is able to run a number of checks on the lazy
+collections themselves.
+
+
+Docstrings
+~~~~~~~~~~
+
+User facing functions should roughly follow the numpydoc_ standard, including
+sections for ``Parameters``, ``Examples``, and general explanatory prose.
+
+By default, examples will be doc-tested.  Reproducible examples in documentation
+is valuable both for testing and, more importantly, for communication of common
+usage to the user.  Documentation trumps testing in this case and clear
+examples should take precedence over using the docstring as testing space.
+To skip a test in the examples add the comment ``# doctest: +SKIP`` directly
+after the line.
+
+.. code-block:: python
+
+   def fib(i):
+       """ A single line with a brief explanation
+
+       A more thorough description of the function, consisting of multiple
+       lines or paragraphs.
+
+       Parameters
+       ----------
+       i: int
+            A short description of the argument if not immediately clear
+
+       Examples
+       --------
+       >>> fib(4)
+       3
+       >>> fib(5)
+       5
+       >>> fib(6)
+       8
+       >>> fib(-1)  # Robust to bad inputs
+       ValueError(...)
+       """
+
+.. _numpydoc: https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard
+
+Docstrings are tested under Python 3.14 on GitHub Actions. You can test
+docstrings with pytest as follows::
+
+   py.test dask --doctest-modules
+
+Docstring testing requires ``graphviz`` to be installed. This can be done via::
+
+   conda install -y graphviz
+
+
+Code Formatting
+~~~~~~~~~~~~~~~
+
+Dask uses several code linters (ruff, black, mypy), which are enforced by CI. Developers
+should run them locally before they submit a PR, through the single command::
+
+   pixi run lint
+
+This makes sure that linter versions and options are aligned for all developers.
+
+Optionally, you may wish to setup the `pre-commit hooks <https://pre-commit.com/>`_ to
+run automatically when you make a git commit. This can be done by running::
+
+   pixi run -e lint pre-commit install
+
+from the root of the Dask repository. Now the code linters will be run each time you
+commit changes. You can skip these checks with ``git commit --no-verify`` or with the
+short version ``git commit -n``.
+
+
+Contributing to Documentation
+-----------------------------
+
+Dask uses Sphinx_ for documentation, hosted on https://readthedocs.org .
+Documentation is maintained in the RestructuredText markup language (``.rst``
+files) in ``dask/docs/source``.  The documentation consists both of prose
+and API documentation.
+
+The documentation is automatically built, and a live preview is available,
+for each pull request submitted to Dask. Additionally, you may also
+build the documentation yourself locally by following the instructions outlined
+below.
+
+How to build the Dask documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To build the documentation locally, make a fork of the main
+`Dask repository <https://github.com/dask/dask>`_, clone the fork::
+
+  git clone https://github.com/<your-github-username>/dask.git
+  cd dask/docs
+
+Install the packages in ``requirements-docs.txt``.
+
+Optionally create and activate a ``conda`` environment first::
+
+  conda create -n daskdocs -c conda-forge python=3.14
+  conda activate daskdocs
+
+Install the dependencies with ``pip``::
+
+  python -m pip install -r requirements-docs.txt
+
+Then build the documentation with ``make``::
+
+   make html
+
+The resulting HTML files end up in the ``build/html`` directory.
+
+You can now make edits to rst files and run ``make html`` again to update
+the affected pages.
+
+
+Dask CI Infrastructure
+----------------------
+
+Github Actions
+~~~~~~~~~~~~~~
+
+Dask uses Github Actions for Continuous Integration (CI) testing for each PR.
+These CI builds will run the test suite across a variety of Python versions, operating
+systems, and package dependency versions.
+
+The CI workflows for Github Actions are defined in
+`.github/workflows <https://github.com/dask/dask/tree/main/.github/workflows>`_
+with additional scripts and metadata located in `continuous_integration
+<https://github.com/dask/dask/tree/main/continuous_integration>`_.
+CI is heavily driven by pixi, which is configured by
+`pixi.toml <https://github.com/dask/dask/blob/main/pixi.toml>`_.
+
+Making Pull Requests
+--------------------
+
+Pull Request Etiquette
+~~~~~~~~~~~~~~~~~~~~~~
+
+When opening a Pull Request you are beginning a dialog with maintainers. This is a bidirectional
+relationship where you are asking for the reviewer's time to look at your contribution, and 
+the reviewer will likely ask for your input and engage you in discussion around the changes.
+
+Please do not propose code that you are not willing to stand behind and discuss.
+Be prepared to respond to review feedback, apply critical thinking and iterate on your contributions.
+
+We ask that you fill out all sections of PR templates and provide reasoning behind your changes,
+ideally with a linked issue that has been discussed by the community.
+
+Automated Contributions and AI Policy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We encourage the use of AI and automated tools to assist in code development,
+documentation, and testing. However, we ask that contributors disclose these tools and
+use them in a way that aligns with Dask's community guidelines. In particular:
+
+- Do not use tools to think or speak for you in discussions, code reviews, or any other
+  interactions within the Dask community.
+- The AI agent can exclusively open _draft_ PRs that are clearly tagged as being written
+  by unsupervised AI. There is a `open-pr` agent skill that explains how.
+- You (the human) **must fully review, understand, and approve** everything that the AI
+  agent wrote. You must replace all AI-generated prose with your own human thoughts.
+- Only after your personal review and cleanup happened, you can remove the disclaimer
+  and mark the PR as ready to be reviewed.
+
+TL;DR version
+^^^^^^^^^^^^^
+
+**Maintainers will close, without reading it, any issue or PR that looks written by
+AI.** First draft written by AI is OK. Final PR is not.
+
+
+.. _Sphinx: https://www.sphinx-doc.org/

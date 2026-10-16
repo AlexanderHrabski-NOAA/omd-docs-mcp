@@ -44,6 +44,31 @@ class Tests(unittest.TestCase):
                       {'name':'protos','path':'protos','version':'8.9.1','kind':'example'}]
         self.manifest.write_text(json.dumps({'sources':self.entries})); build(self.manifest,self.db);self.store=Knowledge(self.db)
     def tearDown(self):self.temp.cleanup()
+    def test_headerlink_permalink_glyph_is_stripped(self):
+        # Read the Docs / Sphinx themes put a Font Awesome private-use glyph
+        # (U+F0C1) inside <a class="headerlink"> on every heading. That UI icon
+        # must not leak into extracted titles or searchable body text.
+        glyph = '\uf0c1'
+        # Real RTD markup: every heading carries a <a class="headerlink"> whose
+        # text is the icon. A parent heading's body spans its nested child
+        # headings, so those child headerlinks leak the glyph into body text
+        # unless every headerlink is decomposed, not just the current one.
+        page = ('<html><body>'
+                '<h1 id="visc">Horizontal viscosity'
+                f'<a class="headerlink" href="#visc" title="Link to this heading">{glyph}</a></h1>'
+                '<p>Sets coefficients.</p>'
+                '<h2 id="lateral">Lateral viscosity'
+                f'<a class="headerlink" href="#lateral" title="Link to this heading">{glyph}</a></h2>'
+                '<p>Eddy module.</p>'
+                '</body></html>')
+        units = html_sections(page, 'rtd.html', 'https://example.invalid/rtd.html')
+        self.assertEqual([u['title'] for u in units],
+                         ['Horizontal viscosity', 'Lateral viscosity'])
+        for unit in units:
+            self.assertNotIn(glyph, unit['title'])
+            self.assertNotIn(glyph, unit['text'])
+        self.assertIn('Sets coefficients', units[0]['text'])
+        self.assertIn('Eddy module', units[1]['text'])
     def test_whole_api_section_and_anchor(self):
         hit=self.store.search('NUOPC_DriverAddComp','documentation')[0]
         self.assertEqual(hit['title'],'NUOPC_DriverAddComp')
