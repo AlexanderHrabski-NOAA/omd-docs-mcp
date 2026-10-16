@@ -10,8 +10,6 @@ __pycache__/
 docs
 tests
 corpus.json
-corpus/pytorch/
-corpus/pytorch-forecasting/
 data/nuopc.sqlite3
 kokkos-lock.json
 standards-lock.json

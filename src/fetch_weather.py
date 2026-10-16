@@ -100,6 +100,13 @@ SNAPSHOT = {
                           'documentation repository; not release-certified; corresponds to MPAS-Model 8.4.2; '
                           'the repository has no license file'),
     },
+    'grib2io': {
+        'repo': 'NOAA-MDL/grib2io', 'ref': 'v2.8.1', 'commit': None,
+        'version': '2.8.1', 'doc_dir': 'docs', 'exts': ('.html',),
+        'licenses': ['LICENSE'],
+        'version_basis': ('Official v2.8.1 release tag; rendered HTML API documentation imported from '
+                          'the tagged repository tree and linked to its resolved commit'),
+    },
 }
 
 # Per-library tag -> version transform (strips release prefixes the tags carry).
@@ -110,6 +117,7 @@ TAG_VERSION = {
     'ufs-weather-model': lambda tag: tag.split('/')[-1],
     'cice': lambda tag: re.sub(r'^CICE', '', tag),
     'fv3': lambda tag: re.sub(r'^FV3-|-public$', '', tag),
+    'grib2io': lambda tag: re.sub(r'^v', '', tag),
 }
 
 
@@ -201,9 +209,13 @@ def snapshot_entry(library, config, commit, ref):
     doc_dir = config['doc_dir']
     base = f"https://github.com/{config['repo']}/blob/{commit}"
     url = base if doc_dir == '.' else f"{base}/{doc_dir}"
+    version_basis=config['version_basis']
+    if library=='grib2io':
+        version_basis=(f'Official release tag {ref}; rendered HTML API documentation imported from '
+                       'the tagged repository tree and linked to its resolved commit')
     entry = {'name': library + '-docs', 'path': f'corpus/{library}/source', 'library': library,
              'version': config['version'], 'kind': 'documentation', 'managed': True, 'revision': commit,
-             'url': url, 'version_basis': config['version_basis']}
+             'url': url, 'version_basis': version_basis}
     if 'target_release' in config:
         entry['target_release'] = config['target_release']
     return entry
@@ -263,10 +275,12 @@ def main():
             ref = latest_ref(library) if args.latest else config['ref']
             repo = checkout(stage, library, ref)
             commit = git(repo, 'rev-parse', 'HEAD')
-            if not args.latest and commit != config['commit']:
+            if not args.latest and config.get('commit') and commit != config['commit']:
                 raise ValueError(f'{library}: checkout does not match pinned commit')
             if git(repo, 'status', '--porcelain'):
                 raise ValueError(f'{library}: checkout is modified')
+            # Record the resolved object even when the release tag is the pin.
+            config['commit'] = commit
             if args.latest:
                 config['ref'] = ref
                 config['commit'] = commit

@@ -144,5 +144,20 @@
     "pages": 671,
     "acquisition": "crawl",
     "checked_at": "2026-10-15T16:24:16.860100+00:00"
+  },
+  "grib2io": {
+    "repo": "NOAA-MDL/grib2io",
+    "ref": "v2.8.1",
+    "commit": "4f11bd57cd4b98a380d0bbcc8af53f08b4bf26f5",
+    "version": "2.8.1",
+    "doc_dir": "docs",
+    "exts": [
+      ".html"
+    ],
+    "licenses": [
+      "LICENSE"
+    ],
+    "version_basis": "Official v2.8.1 release tag; rendered HTML API documentation imported from the tagged repository tree and linked to its resolved commit",
+    "checked_at": "2026-10-16T02:26:27.298339+00:00"
   }
 }

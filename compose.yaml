@@ -1,0 +1,14 @@
+services:
+  omd-mcp:
+    image: omd-mcp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omd-mcp
+    stdin_open: true
+    tty: false
+    init: true
+    read_only: true
+    mem_limit: 512m
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m

@@ -1,20 +1,26 @@
-"""Version-scoped section and Fortran source retrieval for ESMF/NUOPC."""
+"""Version-scoped documentation and source retrieval with lexical and dense search."""
 import bisect
 import hashlib
 import json
+import os
 import re
 import sqlite3
+import threading
 from pathlib import Path
 from bs4 import BeautifulSoup
 
 VERSION = '8.9.1'
-LIBRARIES = ('esmf','kokkos','kokkos-kernels','nws-hpc-standards','jedi','ccpp','ccpp-scm','pytorch','pytorch-forecasting',
+LIBRARIES = ('esmf','kokkos','kokkos-kernels','nws-hpc-standards','jedi','ccpp','ccpp-scm','pytorch','pytorch-forecasting','grib2io',
              'dask','dask-jobqueue','ecflow','ufs-weather-model','mom6','cice','fv3','mpas')
 SCHEMA = '''
 CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
 CREATE TABLE units(id TEXT PRIMARY KEY, library TEXT, version TEXT, kind TEXT, title TEXT, source TEXT,
  citation TEXT, url TEXT, text TEXT, parent TEXT, ordinal INTEGER, start_line INTEGER,
  end_line INTEGER, metadata TEXT);
+CREATE INDEX units_scope ON units(library,version,kind,id);
+CREATE INDEX units_parent ON units(parent,ordinal);
+CREATE TABLE vectors(unit_id TEXT PRIMARY KEY,model TEXT NOT NULL,vector BLOB NOT NULL);
+CREATE TABLE embedding_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE VIRTUAL TABLE search USING fts5(id UNINDEXED,title,text,tokenize='unicode61');
 '''
 
@@ -181,10 +187,10 @@ def build(manifest_path, database):
     counts={}; warnings=[]
     try:
         con.execute('BEGIN IMMEDIATE')
-        for table in ('search','units','meta'): con.execute(f'DROP TABLE IF EXISTS {table}')
+        for table in ('search','vectors','embedding_meta','units','meta'): con.execute(f'DROP TABLE IF EXISTS {table}')
         for statement in SCHEMA.split(';'):
             if statement.strip(): con.execute(statement)
-        con.execute('INSERT INTO meta VALUES (?,?)',('schema','hpc-2'))
+        con.execute('INSERT INTO meta VALUES (?,?)',('schema','hpc-3'))
         for entry in sources:
             version=entry['version']; kind=entry['kind']; library=entry.get('library','esmf')
             if library not in LIBRARIES:raise ValueError('Unknown library')
@@ -223,13 +229,70 @@ def build(manifest_path, database):
 
 
 class Knowledge:
-    def __init__(self,database): self.database=Path(database).resolve()
+    def __init__(self,database):
+        self.database=Path(database).resolve()
+        self._embedder=None
+        self._embedder_lock=threading.Lock()
+        self._vector_cache={}
+        self._vector_cache_lock=threading.Lock()
     def connect(self):
         if not self.database.is_file(): raise ValueError('Run ingest.py to generate the manifest and build the index first')
         con=sqlite3.connect(self.database.as_uri()+'?mode=ro',uri=True,timeout=30); con.row_factory=sqlite3.Row
-        if con.execute("SELECT value FROM meta WHERE key='schema'").fetchone()[0]!='hpc-2':
+        if con.execute("SELECT value FROM meta WHERE key='schema'").fetchone()[0] not in ('hpc-2','hpc-3'):
             con.close(); raise ValueError('Rebuild the index using the new manifest ingestion')
         return con
+    def _semantic_hits(self,con,query,library,version,kind,limit):
+        """Return semantic unit IDs ordered by cosine similarity, or [] without a vector index."""
+        tables={row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if not {'vectors','embedding_meta'} <= tables:return []
+        metadata=dict(con.execute('SELECT key,value FROM embedding_meta'))
+        model_name=metadata.get('model')
+        dimensions=int(metadata.get('dimensions','0'))
+        if not model_name or dimensions<=0:return []
+        if self._embedder is None:
+            with self._embedder_lock:
+                if self._embedder is None:
+                    os.environ.setdefault('HF_HUB_OFFLINE','1')
+                    os.environ.setdefault('HF_HUB_DISABLE_TELEMETRY','1')
+                    try:
+                        from fastembed import TextEmbedding
+                    except ImportError as error:
+                        raise RuntimeError('Semantic index exists; install the project dependencies to enable its query encoder') from error
+                    cache_dir=os.environ.get('DOCS_MCP_MODEL_CACHE',str(self.database.parent/'model-cache'))
+                    self._embedder=TextEmbedding(model_name=model_name,
+                        cache_dir=cache_dir,threads=1)
+        import numpy as np
+        query_vector=np.asarray(next(iter(self._embedder.query_embed(query))),dtype=np.float32)
+        norm=float(np.linalg.norm(query_vector))
+        if query_vector.size!=dimensions or not norm:return []
+        query_vector/=norm
+        cache_key=(model_name,dimensions,library,version,kind)
+        cached=self._vector_cache.get(cache_key)
+        if cached is None:
+            with self._vector_cache_lock:
+                cached=self._vector_cache.get(cache_key)
+                if cached is None:
+                    rows=con.execute('''SELECT unit_id,vector FROM vectors
+                        WHERE model=? AND unit_id IN (SELECT id FROM units
+                            WHERE library=? AND version=? AND (? IS NULL OR kind=?))''',
+                        (model_name,library,version,kind,kind)).fetchall()
+                    if not rows:return []
+                    expected_bytes=dimensions*4
+                    if any(len(row['vector'])!=expected_bytes for row in rows):
+                        raise ValueError('Semantic index contains a vector with an invalid size; rebuild embeddings')
+                    unit_ids=[row['unit_id'] for row in rows]
+                    matrix=np.frombuffer(b''.join(row['vector'] for row in rows),dtype=np.float32).reshape(len(rows),dimensions)
+                    cached=(unit_ids,matrix)
+                    self._vector_cache[cache_key]=cached
+        unit_ids,matrix=cached
+        scores=matrix @ query_vector
+        count=min(max(limit*8,40),len(unit_ids))
+        if count<len(unit_ids):
+            candidates=np.argpartition(scores,-count)[-count:]
+            candidates=candidates[np.argsort(scores[candidates])[::-1]]
+        else:
+            candidates=np.argsort(scores)[::-1]
+        return [(unit_ids[int(index)],float(scores[int(index)])) for index in candidates]
     @staticmethod
     def metadata(row):
         return {key:row[key] for key in ('id','library','version','kind','title','source','citation','url','parent','start_line','end_line')}
@@ -243,6 +306,7 @@ class Knowledge:
         tokens=list(dict.fromkeys(re.findall(r'\w+',query)))[:64]
         if not tokens:return []
         expression=' OR '.join('"'+token+'"' for token in tokens)
+        strict_expression=' AND '.join('"'+token+'"' for token in tokens)
         con=self.connect()
         try:
             if version is None:
@@ -250,9 +314,17 @@ class Knowledge:
                 if not versions:return []
                 if len(versions)!=1:raise ValueError('Multiple versions indexed; select an explicit version from list_sources')
                 version=versions[0]
-            rows=con.execute('''SELECT u.* FROM search JOIN units u ON search.id=u.id
+            rows=con.execute('''SELECT u.*,bm25(search,0,8,1) AS search_rank FROM search JOIN units u ON search.id=u.id
                 WHERE search MATCH ? AND library=? AND version=? AND (? IS NULL OR kind=?)
-                ORDER BY bm25(search,0,8,1) LIMIT 100''',(expression,library,version,kind,kind)).fetchall()
+                ORDER BY search_rank LIMIT 250''',(expression,library,version,kind,kind)).fetchall()
+            strict_ids=set()
+            if len(tokens)>1:
+                strict_rows=con.execute('''SELECT u.*,bm25(search,0,8,1) AS search_rank FROM search JOIN units u ON search.id=u.id
+                    WHERE search MATCH ? AND library=? AND version=? AND (? IS NULL OR kind=?)
+                    ORDER BY search_rank LIMIT 100''',(strict_expression,library,version,kind,kind)).fetchall()
+                strict_ids={row['id'] for row in strict_rows}
+                present={row['id'] for row in rows}
+                rows.extend(row for row in strict_rows if row['id'] not in present)
             exact=re.findall(r'\b(?:NUOPC|ESMF)_\w+\b|\b(?:Kokkos|KokkosBlas|KokkosSparse|KokkosBatched|KokkosGraph)(?:::\w+)+',query,re.I)
             # Fetch exact API-heading candidates separately so broad OR search cannot
             # exclude an API's short parent heading from its first 100 hits.
@@ -265,17 +337,61 @@ class Knowledge:
                     (library,version,kind,kind,name.lower(),leaf.lower())):
                     preferred[candidate['id']]=candidate
             rows=list(preferred.values())+[row for row in rows if row['id'] not in preferred]
-            # Explicit API references strongly prefer their own documentation heading.
-            def title_score(title):
-                plain=title.replace('`','').strip().lower()
-                return sum(3 if name.lower() in plain else 2 if '::' in name and plain==name.split('::')[-1].lower() else 0 for name in exact)
-            rows=sorted(enumerate(rows),key=lambda pair:(-title_score(pair[1]['title']),pair[0]))
+            # OR queries maximize recall, but can place a hit for one common word
+            # above a section matching the full question. Prefer all-token matches,
+            # then rerank by title coverage and exact-title matches, retaining BM25.
+            query_terms=set(re.findall(r'[a-z0-9]+',query.lower()))
+            normalized_query=' '.join(re.findall(r'[a-z0-9]+',query.lower()))
+            def relevance(row):
+                title=row['title'].lower().replace('`','')
+                title_terms=set(re.findall(r'[a-z0-9]+',title))
+                title_coverage=len(query_terms & title_terms)/max(1,len(query_terms))
+                normalized_title=' '.join(re.findall(r'[a-z0-9]+',title))
+                exact_title=normalized_title==normalized_query
+                title_phrase=bool(normalized_query and normalized_query in normalized_title)
+                score=(100 if exact_title else 0)+20*title_coverage+12*title_phrase
+                if row['id'] in strict_ids:score+=16
+                if 'search_rank' in row.keys():score+=-float(row['search_rank'] or 0)*4
+                for name in exact:
+                    plain=title.strip()
+                    leaf=name.split('::')[-1].lower()
+                    if name.lower() in plain:score+=30
+                    elif '::' in name and plain.strip(' .')==leaf:score+=24
+                return score
+            lexical_rows=[row for _,row in sorted(enumerate(rows),key=lambda pair:(-relevance(pair[1]),pair[0]))]
+            lexical_rank={row['id']:rank for rank,row in enumerate(lexical_rows)}
+            semantic_hits=self._semantic_hits(con,query,library,version,kind,limit)
+            semantic_rank={unit_id:rank for rank,(unit_id,_) in enumerate(semantic_hits)}
+            semantic_only=[unit_id for unit_id,_ in semantic_hits if unit_id not in lexical_rank]
+            semantic_rows=[]
+            for start in range(0,len(semantic_only),400):
+                batch=semantic_only[start:start+400]
+                placeholders=','.join('?' for _ in batch)
+                semantic_rows.extend(con.execute(f'SELECT * FROM units WHERE id IN ({placeholders})',batch).fetchall())
+            candidates={row['id']:row for row in lexical_rows}
+            candidates.update({row['id']:row for row in semantic_rows})
+            def hybrid_score(row):
+                identifier=row['id']
+                score=(1/(60+lexical_rank[identifier]) if identifier in lexical_rank else 0)
+                score+=(1/(60+semantic_rank[identifier]) if identifier in semantic_rank else 0)
+                title=' '.join(re.findall(r'[a-z0-9]+',row['title'].lower().replace('`','')))
+                if title==normalized_query:score+=0.03
+                if any(name.lower() in row['title'].lower() for name in exact):score+=0.025
+                return score
+            rows=sorted(candidates.values(),key=hybrid_score,reverse=True)
             results=[]
-            for _,row in rows[:limit]:
+            for row in rows[:limit]:
                 positions=[row['text'].lower().find(token.lower()) for token in tokens]
                 positions=[p for p in positions if p>=0]; start=max(0,min(positions,default=0)-250)
+                provenance=json.loads(row['metadata'])
+                channels=[]
+                if row['id'] in lexical_rank:channels.append('lexical')
+                if row['id'] in semantic_rank:channels.append('semantic')
                 results.append({**self.metadata(row),'excerpt':row['text'][start:start+1800],
-                                'excerpt_offset':start,'total_characters':len(row['text'])})
+                                'excerpt_offset':start,'total_characters':len(row['text']),
+                                'provenance':{key:provenance[key] for key in
+                                    ('revision','version_basis','target_release') if key in provenance},
+                                'retrieved_by':channels})
             return results
         finally:con.close()
     def get(self,unit_id,offset=0,max_characters=16000,include_subsections=False):

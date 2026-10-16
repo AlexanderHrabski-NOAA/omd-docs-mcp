@@ -1,9 +1,10 @@
 # OMD Library Docs MCP Server
 
 A local, read-only documentation retrieval server for GitHub Copilot Agent
-mode and Claude Code. **omd** indexes nine curated collections — ESMF/NUOPC,
+mode and Claude Code. **omd** indexes eighteen curated collections — ESMF/NUOPC,
 Kokkos, Kokkos Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM,
-PyTorch and PyTorch Forecasting — and retrieves complete
+PyTorch, PyTorch Forecasting, grib2io, Dask, dask-jobqueue, ecFlow, UFS Weather
+Model, MOM6, CICE, FV3 and MPAS — and retrieves complete
 manual sections, Fortran routines and C++ examples with release provenance
 and citations. It separates API requirements, examples, framework
 implementation, and your application code.
@@ -41,12 +42,27 @@ committed inputs.
 | `cice` | CICE documentation source at release tag `CICE6.6.3` (commit `c734c12bfb19`); BSD-3-Clause `LICENSE.pdf` retained beside the corpus | `6.6.3` | bundled |
 | `fv3` | FV3 LaTeX technical guide (`fv3_technical_2021.tex`) at release tag `FV3-202604-public` (commit `6f658bd00ffa`), plus example Fortran/README files; Jupyter notebooks are not indexed | `202604` | bundled |
 | `mpas` | MPAS-Dev/MPAS-Documents (the authoritative MPAS documentation repository) master commit `69b46ed16748` — user's guides, developer's guide and design documents in LaTeX; no upstream license file, attribution recorded | `snapshot-69b46ed16748` | bundled |
+| `grib2io` | NOAA-MDL grib2io documentation source at release tag `v2.8.1`; acquisition records the resolved commit and retains its MIT license | `2.8.1` | fetched during build |
 
 Unit counts for fetched collections are reported by `list_collections` after
 building the index. Kokkos pins are recorded in `kokkos-lock.json` (stable releases checked
 2026-10-05), NWS/JEDI/CCPP pins in `standards-lock.json` (checked 2026-10-06),
 and `fetch_corpus.py` pins the NUOPC application prototypes in
 `corpus.catalog.json`.
+
+### Retrieval
+
+Search combines SQLite FTS5/BM25 with a precomputed dense vector index. FTS
+preserves exact API, symbol and configuration-key matches; semantic retrieval
+can also find sections phrased differently from a natural-language question.
+The two ranked lists are combined, with exact title and API matches retained as
+strong signals. The vector index uses FastEmbed's 384-dimensional
+`BAAI/bge-small-en-v1.5` ONNX model over each section's title and opening text.
+Corpus vectors are built during Docker image creation; local indexes can add
+them with `uv run src/build_embeddings.py`.
+The query encoder loads lazily from the packaged local cache, so runtime search
+does not need model-download access. FTS-only indexes continue to work without
+the vector tables.
 
 The importer verified each clean checkout and the official release labels.
 The ESMF examples are release examples, not examples compiled/tested by this
@@ -61,7 +77,8 @@ workflow collections, Dask and dask-jobqueue carry BSD-3 `LICENSE.txt`, ecFlow
 carries Apache-2.0 `LICENSE` and `NOTICE`, CICE carries BSD-3 `LICENSE.pdf` and
 `COPYRIGHT.pdf`, FV3 carries LGPL v3 `LICENSE.md`, MOM6 carries Apache-2.0, and
 the UFS Users Guide carries the repository's mixed-component `LICENSE.md` —
-each retained beside its corpus directory.
+each retained beside its corpus directory. grib2io's MIT `LICENSE` is retained
+beside its fetched documentation.
 `MPAS-Dev/MPAS-Documents` ships no license file; its attribution is recorded in
 the catalog `version_basis`.
 
@@ -156,7 +173,7 @@ fetches versioned PyTorch documentation and regenerates the SQLite index;
 your MCP client then runs the server in a read-only container:
 
 ```sh
-docker build -t omd-mcp .
+docker compose up -d --build
 ```
 
 Then enable the server in your client.
@@ -177,8 +194,9 @@ listed. The VS Code extension uses the same MCP configuration as the CLI.
 
 Docker and internet access during the build are required. To run the server as
 a named container (`omd-mcp`) instead — building the image on first use and
-clearing any stale name conflict — use `./run-omd-mcp.sh` (`--rebuild` or
-`--stop` supported).
+clearing any stale name conflict — use `docker compose up -d --build` and stop it
+with `docker compose down`. The legacy `./run-omd-mcp.sh` launcher is also
+available.
 
 **Refreshing the index.** The container index is rebuilt during each Docker
 build. To regenerate the local development index:
@@ -198,12 +216,17 @@ Clone this repository, open it in VS Code, and run in its terminal:
 ```sh
 uv sync
 uv run src/fetch_pytorch.py
+uv run src/fetch_weather.py --only grib2io
 uv run src/ingest.py
+uv run src/build_embeddings.py
 ```
 
 The bundled sources let you index without downloading manuals again; fetching
-PyTorch documentation requires internet access. Python package installation
-also requires internet access. No ESMF build is needed for indexing.
+PyTorch and grib2io documentation and downloading the compact embedding model
+require internet access. Python package installation also requires internet
+access. `build_embeddings.py` adds the local semantic index alongside FTS5;
+search continues to use FTS5 if vectors have not been generated. No ESMF build
+is needed for indexing.
 
 Start **omd** from `.vscode/mcp.json` or `MCP: List Servers` (Copilot), or
 register it with `claude mcp add` as above (Claude Code). In Copilot Agent mode,
@@ -435,8 +458,8 @@ uv run src/ingest.py
 ```
 
 MOM6 is crawled from `https://mom6.readthedocs.io/en/main/` during the Docker
-build (like PyTorch) because its Doxygen API reference exists only on the
-rendered site; the other seven libraries are committed source snapshots.
+build because its Doxygen API reference exists only on the rendered site. The
+other fourteen collections are bundled sources or fetched from pinned releases.
 `weather-lock.json` records every pin. MPAS documentation comes from the
 separate `MPAS-Dev/MPAS-Documents` repository (the authoritative docs repo,
 LaTeX-based; the model repo's `docs/` is a stub). FV3's Jupyter notebooks are
@@ -475,7 +498,7 @@ NUOPC_CompSpecialize, NUOPC_DriverAddComp and NUOPC_Advertise. Real example sear
 check driver registration and cap labels against the pinned source commit, and
 regression coverage now pins prototype discoverability plus CCPP included-code
 and auxiliary-file handling.
-Further tests cover collection/version isolation across all seventeen libraries,
+Further tests cover collection/version isolation across all eighteen libraries,
 Markdown, RST and LaTeX parsing, included-code retrieval, fetcher helpers, and real
 documentation from the Kokkos, NWS, JEDI and CCPP collections (59 unit tests).
 The smoke test exercises all thirteen tools through a real MCP stdio client/server;
