@@ -1,0 +1,23 @@
+# Install once with `uvx pre-commit install`; the hooks then run on every commit.
+# CI runs the same hooks: `uvx pre-commit run --all-files`.
+#
+# corpus/ is vendored third-party documentation, quoted verbatim with line-number
+# citations and pinned revisions, so no hook may rewrite or flag it.
+exclude: ^(corpus/|data/|uv\.lock$)
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell

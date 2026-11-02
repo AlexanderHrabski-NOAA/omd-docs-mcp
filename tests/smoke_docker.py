@@ -59,6 +59,13 @@ def _payload(result):
     return None
 
 
+def _has_pytorch(list_collections_response):
+    """PyTorch docs are opt-in at build time (INCLUDE_PYTORCH=1); expect them only in images that have them."""
+    payload = _payload(list_collections_response["result"])
+    rows = payload if isinstance(payload, list) else payload.get("result", [])
+    return any(row["library"] == "pytorch" for row in rows)
+
+
 class DockerMcpSmoke(unittest.TestCase):
     def setUp(self):
         if shutil.which("docker") is None:
@@ -187,8 +194,9 @@ class DockerMcpSmoke(unittest.TestCase):
         self.assertEqual(units.get(("kokkos-kernels", "5.2.2")), 641)
         self.assertEqual(units.get(("nws-hpc-standards", "11.0.0")), 22)
         self.assertEqual(units.get(("jedi", "snapshot-7cd222915252")), 1900)
-        self.assertGreater(units.get(("pytorch", "2.14"), 0), 0)
-        self.assertGreater(units.get(("pytorch-forecasting", "1.0.0"), 0), 0)
+        if any(library == "pytorch" for library, _ in units):
+            self.assertGreater(units.get(("pytorch", "2.14"), 0), 0)
+            self.assertGreater(units.get(("pytorch-forecasting", "1.0.0"), 0), 0)
 
     def test_search_and_context(self):
         resp = self._exchange()
@@ -203,8 +211,9 @@ class DockerMcpSmoke(unittest.TestCase):
         kok = kok.get("result", kok) if isinstance(kok, dict) else kok
         self.assertTrue(any("gemm" in (h.get("title", "").lower()) for h in kok))
         pytorch = _payload(resp[11]["result"])
-        self.assertTrue(pytorch["collections"]["pytorch"])
-        self.assertTrue(pytorch["collections"]["pytorch-forecasting"])
+        if _has_pytorch(resp[3]):
+            self.assertTrue(pytorch["collections"]["pytorch"])
+            self.assertTrue(pytorch["collections"]["pytorch-forecasting"])
         ccpp = _payload(resp[9]["result"])
         self.assertIn("collections", ccpp)
         self.assertIn("ccpp", ccpp["collections"])

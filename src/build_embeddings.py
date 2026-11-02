@@ -40,7 +40,8 @@ def build_embeddings(database, cache_dir, model_name=MODEL, batch_size=48, threa
         passages = (f'{title}\n{text[:MAX_DOCUMENT_CHARACTERS]}' for title, text in text_cursor)
         vectors = embedder.passage_embed(passages, batch_size=batch_size, parallel=parallel)
         records = []
-        for (unit_id,), vector in zip(id_cursor, vectors):
+        # Not strict on purpose: a short result is reported by the count check below.
+        for (unit_id,), vector in zip(id_cursor, vectors, strict=False):
             vector = np.asarray(vector, dtype=np.float32)
             norm = float(np.linalg.norm(vector))
             if vector.size != DIMENSIONS or not norm:

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from knowledge import Knowledge, VERSION
+from knowledge import Knowledge
 
 ROOT=Path(__file__).resolve().parent.parent
 knowledge=Knowledge(os.environ.get('DOCS_MCP_DB',str(ROOT/'data'/'nuopc.sqlite3')))
