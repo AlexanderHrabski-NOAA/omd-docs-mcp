@@ -208,7 +208,7 @@ class IdempotentSkipTests(unittest.TestCase):
         self.module = fetch_weather
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.patch = unittest.mock.patch.object(fetch_weather, 'ROOT', self.root)
+        self.patch = mock.patch.object(fetch_weather, 'ROOT', self.root)
         self.patch.start()
         self.entry = [{'name': 'mom6-docs', 'library': 'mom6', 'managed': True}]
         self.lock = {'mom6': {'version': 'snapshot-main'}}

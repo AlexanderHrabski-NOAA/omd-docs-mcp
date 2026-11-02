@@ -71,7 +71,6 @@ def links_in_scope(html, page_url, base_url):
         parsed = urllib.parse.urlsplit(url)
         base = urllib.parse.urlsplit(base_url)
         path = urllib.parse.unquote(parsed.path)
-        base_path = urllib.parse.unquote(base.path)
         if path.endswith('/'):
             path += 'index.html'
         links.add(urllib.parse.urlunsplit((base.scheme, base.netloc,
