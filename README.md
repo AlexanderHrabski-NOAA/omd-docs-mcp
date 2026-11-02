@@ -497,6 +497,7 @@ There is no automatic folder watcher.
 uv run python -m unittest discover -s tests -t .
 uv run python -m tests.smoke_mcp
 uv run python -m unittest tests.smoke_docker   # requires: docker build -t omd-mcp .
+uvx pre-commit run --all-files                 # ruff, spell-check and whitespace
 ```
 
 Tests cover section/subsection boundaries, module-qualified/nested routines,
@@ -509,9 +510,23 @@ regression coverage now pins prototype discoverability plus CCPP included-code
 and auxiliary-file handling.
 Further tests cover collection/version isolation across all eighteen libraries,
 Markdown, RST and LaTeX parsing, included-code retrieval, fetcher helpers, and real
-documentation from the Kokkos, NWS, JEDI and CCPP collections (59 unit tests).
+documentation from the Kokkos, NWS, JEDI and CCPP collections. Offline tests also
+cover hybrid semantic search and the embedding build with a stub encoder, and check
+that `LIBRARIES`, the catalog, the lock files, the `search_docs` description and this
+README agree whenever a collection is added.
 The smoke test exercises all thirteen tools through a real MCP stdio client/server;
 `tests.smoke_docker` replays the same calls inside the built image.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the first two commands and the
+pre-commit hooks on every pull request. The Docker smoke test
+(`.github/workflows/docker-smoke.yml`) runs weekly and on demand instead, because
+the image build fetches documentation from external sites; it can also be started
+with PyTorch included, and its PyTorch assertions apply only to images that have
+it. Run `uvx pre-commit install` once to run the hooks on each commit. They skip
+`corpus/`, which is vendored documentation that must stay byte-exact. Two Kokkos
+ranking tests are marked as expected failures (see the comment in
+`tests/test_collections.py`); once search ranking is fixed, unittest reports an
+unexpected success and the marks should be removed.
 
 This validates retrieval, **not ESMF compilation, MPI execution, scientific
 correctness, or an improvement in agent-generated code**. Those need evaluation
