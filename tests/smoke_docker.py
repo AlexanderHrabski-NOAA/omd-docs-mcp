@@ -237,6 +237,21 @@ class DockerMcpSmoke(unittest.TestCase):
         self.assertTrue(any(r["library"] == "dask" for r in rows),
                         "legacy launch: list_collections missing dask")
 
+    def test_explicit_api_name_returns_its_reference_page_first(self):
+        # The unit tests use stub vectors. This is the only check that runs the real query
+        # encoder against the shipped index, where ranking needs both lexical and semantic hits.
+        names = {30: "parallel_for", 31: "View"}
+        requests = [INIT, NOTIF] + [
+            call(cid, "search_docs", {"query": f"Kokkos::{name}", "library": "kokkos", "limit": 3})
+            for cid, name in names.items()]
+        resp = self._exchange(RUN, requests, set(names))
+        for cid, name in names.items():
+            hits = _payload(resp[cid]["result"])
+            hits = hits.get("result", hits) if isinstance(hits, dict) else hits
+            self.assertTrue(hits, f"search_docs('Kokkos::{name}') found nothing")
+            self.assertEqual(hits[0]["title"].replace("`", ""), name,
+                             f"Kokkos::{name}: top hit is {hits[0]['title']!r} from {hits[0]['source']}")
+
 
 if __name__ == "__main__":
     unittest.main()
