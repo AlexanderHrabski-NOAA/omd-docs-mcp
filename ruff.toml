@@ -1,0 +1,14 @@
+# Correctness-only lint rules, deliberately narrower than ruff's default set (which is
+# broad and can change between releases).
+#
+# Not selected; each is a separate decision for the team:
+#   E      pycodestyle. The codebase is written in a compact one-line/semicolon style (E701, E702).
+#   I, UP  import sorting and syntax modernisation: auto-fixable, but they touch many files.
+# `ruff format` is not enabled either: it would rewrite nearly every file.
+target-version = "py311"
+
+# Vendored third-party documentation; never lint or rewrite it.
+extend-exclude = ["corpus"]
+
+[lint]
+select = ["F", "E9", "B"]
