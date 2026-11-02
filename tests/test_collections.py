@@ -85,6 +85,18 @@ class KokkosReleaseTests(unittest.TestCase):
         self.assertEqual(hit['title'],'``View``')
         self.assertIn('cpp:class::',result['text'])
         self.assertIn('DataType',result['text'])
+    def test_explicit_api_names_return_their_own_reference_page_first(self):
+        # Not subview (its function and type pages tie) or create_mirror_view (heading is create_mirror[_view]).
+        for name in ('parallel_for','parallel_reduce','deep_copy','RangePolicy','TeamPolicy','MDRangePolicy','View'):
+            with self.subTest(name=name):
+                hit=self.store.search(f'Kokkos::{name}','documentation',library='kokkos')[0]
+                self.assertEqual(hit['title'].replace('`',''),name)
+    def test_explicit_api_name_matching_ignores_case(self):
+        hit=self.store.search('kokkos::view','documentation',library='kokkos')[0]
+        self.assertEqual(hit['title'],'``View``')
+    def test_each_api_named_in_one_query_ranks_ahead_of_prose(self):
+        hits=self.store.search('Kokkos::View Kokkos::deep_copy','documentation',limit=2,library='kokkos')
+        self.assertEqual({hit['title'].replace('`','') for hit in hits},{'View','deep_copy'})
     def test_view_heading_wins_in_hybrid_mode_when_semantic_search_prefers_the_overview(self):
         # The searches above are lexical-only because the regression index has no vectors, but the
         # shipped index is hybrid. Reproduce Kokkos::View there: the semantic channel puts the overview
@@ -92,12 +104,14 @@ class KokkosReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             database=Path(directory)/'hybrid.sqlite3'
             shutil.copy(regression_database(),database)
-            con=sqlite3.connect(database);rows=[]
+            con=sqlite3.connect(database);rows=[];found={'overview':0,'heading':0}
             for unit_id,title,source in con.execute("SELECT id,title,source FROM units WHERE library='kokkos'"):
-                if title=='View and related' and source.endswith('API/core/View.rst'):vector=(1,0,0)
-                elif title=='``View``' and source.endswith('API/core/view/view.rst'):vector=(-1,0,0)
+                if title=='View and related' and source.endswith('API/core/View.rst'):vector=(1,0,0);found['overview']+=1
+                elif title=='``View``' and source.endswith('API/core/view/view.rst'):vector=(-1,0,0);found['heading']+=1
                 else:vector=(0,1,0)
                 rows.append((unit_id,'stub',np.asarray(vector,dtype=np.float32).tobytes()))
+            # If a corpus refresh renames either page this test would pass without testing anything.
+            self.assertEqual(found,{'overview':1,'heading':1},'fixture pages not found; update this test')
             con.executemany('INSERT INTO vectors(unit_id,model,vector) VALUES (?,?,?)',rows)
             con.executemany('INSERT INTO embedding_meta(key,value) VALUES (?,?)',[('model','stub'),('dimensions','3')])
             con.commit();con.close()
