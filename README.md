@@ -546,8 +546,9 @@ source and index may contain confidential code; keep them protected accordingly.
 - [JEDI documentation](https://jcsda-jedi-docs.readthedocs-hosted.com/en/latest/) — [source](https://github.com/JCSDA/jedi-docs)
 - [CCPP documentation](https://ccpp-doc.readthedocs.io/en/latest/) — [source](https://github.com/NCAR/ccpp-doc)
 - [CCPP-SCM documentation](https://ccpp-scm.readthedocs.io/en/latest/) — [source](https://github.com/NCAR/ccpp-scm)
+- [NUOPC application prototypes](https://github.com/esmf-org/nuopc-app-prototypes/tree/patch/8.9.1)
 
 ## DISCLAIMER
 
 Generative AI tools are used to assist with developing this code. The code has been reviewed, edited, and validated by NWS staff.
-- [NUOPC application prototypes](https://github.com/esmf-org/nuopc-app-prototypes/tree/patch/8.9.1)
+
