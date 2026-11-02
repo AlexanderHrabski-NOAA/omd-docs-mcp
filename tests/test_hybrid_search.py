@@ -44,9 +44,19 @@ def basis_vector(index, size=DIMENSIONS):
     return vector
 
 
-def build_index(root, libraries):
-    """Index DOC once per (library, version) and return the database path."""
-    (root / 'doc.rst').write_text(DOC)
+def write_vectors(database, rows, model=MODEL, dimensions=DIMENSIONS):
+    """Store (unit_id, model, blob) rows plus the embedding metadata, the way build_embeddings would."""
+    con = sqlite3.connect(database)
+    con.executemany('INSERT OR REPLACE INTO vectors(unit_id,model,vector) VALUES (?,?,?)', rows)
+    con.executemany('INSERT OR REPLACE INTO embedding_meta(key,value) VALUES (?,?)',
+                    [('model', model), ('dimensions', str(dimensions))])
+    con.commit()
+    con.close()
+
+
+def build_index(root, libraries, doc=DOC):
+    """Index ``doc`` once per (library, version) and return the database path."""
+    (root / 'doc.rst').write_text(doc)
     entries = [{'name': 'doc', 'path': 'doc.rst', 'library': library, 'version': version, 'kind': 'documentation'}
                for library, version in libraries]
     manifest = root / 'corpus.json'
@@ -92,12 +102,7 @@ class HybridSearchTests(unittest.TestCase):
         """Store a basis vector for each section, the way build_embeddings would."""
         rows = [(self.ids[scope][title], model, basis_vector(index, dimensions).tobytes())
                 for title, index in BASIS.items()]
-        con = sqlite3.connect(self.db)
-        con.executemany('INSERT OR REPLACE INTO vectors(unit_id,model,vector) VALUES (?,?,?)', rows)
-        con.executemany('INSERT OR REPLACE INTO embedding_meta(key,value) VALUES (?,?)',
-                        [('model', model), ('dimensions', str(dimensions))])
-        con.commit()
-        con.close()
+        write_vectors(self.db, rows, model, dimensions)
 
     def execute(self, statement, *parameters):
         con = sqlite3.connect(self.db)
@@ -176,6 +181,77 @@ class HybridSearchTests(unittest.TestCase):
         hits = self.search('widget', StubEmbedder(basis_vector(BASIS['Gamma'])))
         self.assertEqual([hit['title'] for hit in hits], ['Alpha'])
         self.assertEqual(hits[0]['retrieved_by'], ['lexical'])
+
+
+API_DOC = '''Parallel dispatch
+=================
+
+Use parallel_for to run a loop, and parallel_for again for the next one.
+
+Writing a parallel_for loop
+===========================
+
+A parallel_for loop body is a lambda or a functor.
+
+Choosing a parallel_for policy
+==============================
+
+parallel_for accepts any execution policy.
+
+Why parallel_for is fast
+========================
+
+parallel_for dispatches straight to the backend.
+
+``parallel_for``
+================
+
+Reference page for the dispatch function.
+'''
+API_HEADING = '``parallel_for``'
+
+
+class ExactApiHeadingTests(unittest.TestCase):
+    """An explicit API reference must beat prose that the semantic channel prefers.
+
+    The regression index has no vectors, so this is the only place the final rank
+    fusion is checked against a bare ``name`` heading such as Kokkos::View -> ``View``.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.db = build_index(self.root, [('kokkos', 'snapshot-test')], doc=API_DOC)
+        con = sqlite3.connect(self.db)
+        self.ids = dict(con.execute("SELECT title,id FROM units WHERE library='kokkos'"))
+        con.close()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def search(self, query, query_vector):
+        store = Knowledge(self.db)
+        store._embedder = StubEmbedder(query_vector)
+        return store.search(query, 'documentation', library='kokkos', version='snapshot-test')
+
+    def store_vectors(self, api_vector):
+        """The four prose sections sit on the query direction; the API page is wherever ``api_vector`` says."""
+        rows = []
+        for title, unit_id in self.ids.items():
+            vector = api_vector if title == API_HEADING else basis_vector(0)
+            rows.append((unit_id, MODEL, np.asarray(vector, dtype=np.float32).tobytes()))
+        write_vectors(self.db, rows)
+
+    def test_leaf_heading_outranks_prose_that_wins_both_channels(self):
+        self.store_vectors(api_vector=basis_vector(3))  # orthogonal: the API page is semantically last
+        hits = self.search('Kokkos::parallel_for', basis_vector(0))
+        self.assertEqual(hits[0]['title'], API_HEADING)
+
+    def test_unqualified_query_keeps_the_prose_first(self):
+        # The preference is for *explicit* API references only; a plain topic query is unchanged.
+        self.store_vectors(api_vector=basis_vector(3))
+        hits = self.search('how do I write a loop', basis_vector(0))
+        self.assertNotEqual(hits[0]['title'], API_HEADING)
 
 
 class FakeTextEmbedding:

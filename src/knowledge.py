@@ -336,6 +336,11 @@ class Knowledge:
                     OR lower(trim(replace(title,'`','')))=?) LIMIT 50""",
                     (library,version,kind,kind,name.lower(),leaf.lower())):
                     preferred[candidate['id']]=candidate
+            # Title-matched candidates are read straight from units and carry no BM25 score, so relevance()
+            # would rank them far below full-text hits. They are the explicit API headings the query names:
+            # score them as the best full-text match, which keeps their order among themselves.
+            best_rank=min((row['search_rank'] for row in rows),default=0)
+            preferred={identifier:{**dict(row),'search_rank':best_rank} for identifier,row in preferred.items()}
             rows=list(preferred.values())+[row for row in rows if row['id'] not in preferred]
             # OR queries maximize recall, but can place a hit for one common word
             # above a section matching the full question. Prefer all-token matches,
@@ -376,7 +381,11 @@ class Knowledge:
                 score+=(1/(60+semantic_rank[identifier]) if identifier in semantic_rank else 0)
                 title=' '.join(re.findall(r'[a-z0-9]+',row['title'].lower().replace('`','')))
                 if title==normalized_query:score+=0.03
-                if any(name.lower() in row['title'].lower() for name in exact):score+=0.025
+                # An explicit API reference prefers its own heading: the full name in the title, or
+                # the bare leaf heading (``View`` for Kokkos::View), as relevance() above also does.
+                leaf_heading=row['title'].lower().replace('`','').strip(' .')
+                if any(name.lower() in row['title'].lower()
+                       or ('::' in name and leaf_heading==name.split('::')[-1].lower()) for name in exact):score+=0.025
                 return score
             rows=sorted(candidates.values(),key=hybrid_score,reverse=True)
             results=[]

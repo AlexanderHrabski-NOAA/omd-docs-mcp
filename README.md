@@ -523,10 +523,7 @@ pre-commit hooks on every pull request. The Docker smoke test
 the image build fetches documentation from external sites; it can also be started
 with PyTorch included, and its PyTorch assertions apply only to images that have
 it. Run `uvx pre-commit install` once to run the hooks on each commit. They skip
-`corpus/`, which is vendored documentation that must stay byte-exact. Two Kokkos
-ranking tests are marked as expected failures (see the comment in
-`tests/test_collections.py`); once search ranking is fixed, unittest reports an
-unexpected success and the marks should be removed.
+`corpus/`, which is vendored documentation that must stay byte-exact.
 
 This validates retrieval, **not ESMF compilation, MPI execution, scientific
 correctness, or an improvement in agent-generated code**. Those need evaluation

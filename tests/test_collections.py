@@ -1,9 +1,17 @@
 import json
+import shutil
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+import numpy as np
 from knowledge import Knowledge, build, markup_sections
 from tests.regression_index import regression_database, regression_store
+
+class QueryEncoder:
+    """Stands in for fastembed's query encoder: every query maps to one fixed vector."""
+    def __init__(self,vector):self.vector=np.asarray(vector,dtype=np.float32)
+    def query_embed(self,query):return iter([self.vector])
 
 RST='''KokkosBlas::gemm
 ################
@@ -64,11 +72,6 @@ class KokkosReleaseTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.store=regression_store()
-    # The next two tests have failed since 000cfbd, whose hybrid-search rewrite dropped the
-    # leaf-title boost: the API page for Kokkos::parallel_for / Kokkos::View no longer ranks first.
-    # Fix the ranking in Knowledge.search, then delete both decorators; once it is fixed unittest
-    # reports an unexpected success, which is the reminder to do so.
-    @unittest.expectedFailure
     def test_core_api_section(self):
         hit=self.store.search('Kokkos::parallel_for','documentation',library='kokkos')[0]
         result=self.store.get(hit['id'],include_subsections=True)
@@ -76,13 +79,31 @@ class KokkosReleaseTests(unittest.TestCase):
         self.assertIn('functor',result['text'])
         self.assertTrue(result['version'].startswith('snapshot-'))
         self.assertIn(result['provenance']['revision'],result['url'])
-    @unittest.expectedFailure
     def test_view_parent_section_is_discoverable(self):
         hit=self.store.search('Kokkos::View','documentation',library='kokkos')[0]
         result=self.store.get(hit['id'],include_subsections=True)
         self.assertEqual(hit['title'],'``View``')
         self.assertIn('cpp:class::',result['text'])
         self.assertIn('DataType',result['text'])
+    def test_view_heading_wins_in_hybrid_mode_when_semantic_search_prefers_the_overview(self):
+        # The searches above are lexical-only because the regression index has no vectors, but the
+        # shipped index is hybrid. Reproduce Kokkos::View there: the semantic channel puts the overview
+        # page first and does not retrieve the bare View heading at all.
+        with tempfile.TemporaryDirectory() as directory:
+            database=Path(directory)/'hybrid.sqlite3'
+            shutil.copy(regression_database(),database)
+            con=sqlite3.connect(database);rows=[]
+            for unit_id,title,source in con.execute("SELECT id,title,source FROM units WHERE library='kokkos'"):
+                if title=='View and related' and source.endswith('API/core/View.rst'):vector=(1,0,0)
+                elif title=='``View``' and source.endswith('API/core/view/view.rst'):vector=(-1,0,0)
+                else:vector=(0,1,0)
+                rows.append((unit_id,'stub',np.asarray(vector,dtype=np.float32).tobytes()))
+            con.executemany('INSERT INTO vectors(unit_id,model,vector) VALUES (?,?,?)',rows)
+            con.executemany('INSERT INTO embedding_meta(key,value) VALUES (?,?)',[('model','stub'),('dimensions','3')])
+            con.commit();con.close()
+            store=Knowledge(database);store._embedder=QueryEncoder((1,0,0))
+            hits=store.search('Kokkos::View','documentation',library='kokkos')
+            self.assertEqual(hits[0]['title'],'``View``')
     def test_kernel_signatures_examples_and_release(self):
         for name in ('KokkosBlas::gemm','KokkosSparse::spmv'):
             hit=self.store.search(name,'documentation',library='kokkos-kernels')[0]
