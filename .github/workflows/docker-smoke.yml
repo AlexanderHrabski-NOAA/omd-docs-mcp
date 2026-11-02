@@ -1,0 +1,34 @@
+name: Docker image smoke test
+
+# Builds the real image and drives it over MCP stdio on a read-only filesystem, as
+# clients run it. The build downloads documentation from external sites (the MOM6 and
+# grib2io fetches, plus an optional PyTorch crawl) and is slow, so this runs weekly and
+# on demand rather than on every pull request.
+on:
+  workflow_dispatch:
+    inputs:
+      include_pytorch:
+        description: Also crawl and index the PyTorch documentation (much slower)
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      INCLUDE_PYTORCH: ${{ inputs.include_pytorch && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build -t omd-mcp --build-arg INCLUDE_PYTORCH="$INCLUDE_PYTORCH" .
+      # The smoke test uses only the standard library, so no project install is needed.
+      - name: Smoke-test the image over MCP stdio
+        run: python3 -m unittest tests.smoke_docker -v
