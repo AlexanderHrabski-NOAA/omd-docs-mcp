@@ -10,7 +10,7 @@ from knowledge import LIBRARIES, build, markup_sections
 
 
 WEATHER_LIBRARIES = ('dask', 'dask-jobqueue', 'ecflow', 'ufs-weather-model',
-                     'mom6', 'cice', 'fv3', 'mpas')
+                     'mom6', 'cice', 'fv3', 'mpas', 'grib2io')
 
 
 class WeatherRegistrationTests(unittest.TestCase):
@@ -38,7 +38,9 @@ class WeatherRegistrationTests(unittest.TestCase):
             with self.subTest(library=library):
                 for key in ('repo', 'ref', 'commit', 'version', 'doc_dir', 'exts', 'licenses'):
                     self.assertIn(key, config)
-                self.assertRegex(config['commit'], r'^[0-9a-f]{40}$')
+                # grib2io pins a release tag; its commit is resolved and recorded at fetch time.
+                if config['commit'] is not None:
+                    self.assertRegex(config['commit'], r'^[0-9a-f]{40}$')
                 self.assertTrue(config['version'])
 
     def test_rolling_snapshot_labels(self):
