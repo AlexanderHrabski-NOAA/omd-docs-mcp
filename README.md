@@ -566,4 +566,3 @@ source and index may contain confidential code; keep them protected accordingly.
 ## DISCLAIMER
 
 Generative AI tools are used to assist with developing this code. The code has been reviewed, edited, and validated by NWS staff.
-
