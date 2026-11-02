@@ -41,8 +41,10 @@ REQUESTS = [
     call(9, "get_ccpp_context", {"query": "scheme template", "limit": 4}),
     call(10, "get_ccpp_scm_context", {"query": "case setup", "limit": 4}),
     call(11, "get_pytorch_context", {"query": "model", "limit": 4}),
+    call(12, "search_docs", {"query": "rocoto workflow configuration", "library": "uwtools", "limit": 4}),
+    call(13, "search_docs", {"query": "mpp_init", "library": "fms", "limit": 4}),
 ]
-EXPECTED_IDS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+EXPECTED_IDS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}
 
 
 def _payload(result):
@@ -194,6 +196,8 @@ class DockerMcpSmoke(unittest.TestCase):
         self.assertEqual(units.get(("kokkos-kernels", "5.2.2")), 641)
         self.assertEqual(units.get(("nws-hpc-standards", "11.0.0")), 22)
         self.assertEqual(units.get(("jedi", "snapshot-7cd222915252")), 1900)
+        self.assertGreater(units.get(("uwtools", "snapshot-main"), 0), 0)
+        self.assertGreater(units.get(("fms", "2026.03"), 0), 0)
         if any(library == "pytorch" for library, _ in units):
             self.assertGreater(units.get(("pytorch", "2.14"), 0), 0)
             self.assertGreater(units.get(("pytorch-forecasting", "1.0.0"), 0), 0)
@@ -210,6 +214,11 @@ class DockerMcpSmoke(unittest.TestCase):
         kok = _payload(resp[6]["result"])
         kok = kok.get("result", kok) if isinstance(kok, dict) else kok
         self.assertTrue(any("gemm" in (h.get("title", "").lower()) for h in kok))
+        for request_id, library in ((12, "uwtools"), (13, "fms")):
+            hits = _payload(resp[request_id]["result"])
+            hits = hits.get("result", hits) if isinstance(hits, dict) else hits
+            self.assertTrue(hits, f"search_docs found nothing in {library}")
+            self.assertTrue(all(h["library"] == library for h in hits))
         pytorch = _payload(resp[11]["result"])
         if _has_pytorch(resp[3]):
             self.assertTrue(pytorch["collections"]["pytorch"])

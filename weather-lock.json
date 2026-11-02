@@ -159,5 +159,44 @@
     ],
     "version_basis": "Official v2.8.1 release tag; rendered HTML API documentation imported from the tagged repository tree and linked to its resolved commit",
     "checked_at": "2026-10-16T02:26:27.298339+00:00"
+  },
+  "uwtools": {
+    "version": "snapshot-main",
+    "target_release": "2.22.0",
+    "base_url": "https://uwtools.readthedocs.io/en/main/",
+    "start_pages": [
+      "index.html"
+    ],
+    "path": "corpus/uwtools/source",
+    "revision": "8c902887ed04930f5ecd10212852a4f2c585e57c",
+    "url": "https://github.com/ufs-community/uwtools",
+    "license_repo": "ufs-community/uwtools",
+    "license_file": "LICENSE",
+    "version_basis": "Official rolling /en/main/ documentation site (authoritative for uwtools), crawled from the rendered site because the Sphinx autodoc API pages exist only there; the site declares release 2.22.0 and Read the Docs built main at commit 8c902887ed04930f5ecd10212852a4f2c585e57c when pinned; not release-certified",
+    "pages": 113,
+    "acquisition": "crawl",
+    "checked_at": "2026-11-02T14:23:30.769190+00:00"
+  },
+  "fms": {
+    "version": "2026.03",
+    "base_url": "https://noaa-gfdl.github.io/FMS/",
+    "start_pages": [
+      "index.html",
+      "classes.html",
+      "hierarchy.html",
+      "pages.html",
+      "functions.html"
+    ],
+    "path": "corpus/fms/source",
+    "revision": "6534c3e4c6e42480ddaaeec7fd08b712863401d4",
+    "url": "https://github.com/NOAA-GFDL/FMS",
+    "license_repo": "NOAA-GFDL/FMS",
+    "license_file": "LICENSE",
+    "workers": 4,
+    "delay": 0.5,
+    "version_basis": "Official FMS Doxygen site on GitHub Pages (authoritative for the FMS API), which NOAA-GFDL/FMS rebuilds from the repository on each published release; observed built 2026-10-09 from release tag 2026.03 (commit 6534c3e4c6e42480ddaaeec7fd08b712863401d4) when pinned; includes the Doxygen API reference generated only on the rendered site; a later crawl after a new release would describe that release",
+    "pages": 561,
+    "acquisition": "crawl",
+    "checked_at": "2026-11-02T14:25:37.140812+00:00"
   }
 }

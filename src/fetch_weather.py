@@ -1,11 +1,13 @@
 """Import Dask, dask-jobqueue, ecFlow, UFS, CICE, FV3 and MPAS documentation
-snapshots, and crawl the authoritative MOM6 site, preserving other collections.
+snapshots, and crawl the authoritative MOM6, uwtools and FMS sites, preserving
+other collections.
 
 Each project is a separate library. Documentation is imported from an immutable
-upstream ref when the repository holds the authoritative source; MOM6 is crawled
-from its official rendered site because its Doxygen API reference exists only
-there. License/attribution files are kept beside each corpus, and rolling branches
-are labelled as snapshots, never as releases.
+upstream ref when the repository holds the authoritative source; MOM6, uwtools and
+FMS are crawled from their official rendered sites because their API references
+(Doxygen or Sphinx autodoc) exist only there. License/attribution files are kept
+beside each corpus, and rolling branches are labelled as snapshots, never as
+releases.
 """
 import argparse
 import base64
@@ -22,9 +24,11 @@ from fetch_pytorch import crawl_site, download_html_zip
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# MOM6 is acquired from its official /en/main/ HTML site (build-time, like PyTorch),
-# because the repository docs/ tree only holds Doxygen stubs for the API reference.
-MOM6_SITES = {
+# Rendered-site libraries are acquired from their official HTML sites (build-time,
+# like PyTorch). MOM6 and FMS publish API references that only exist rendered
+# (Doxygen); uwtools' API pages are Sphinx autodoc, likewise absent from the source.
+# `htmlzip_url` is optional: sites without a published artifact are crawled directly.
+RENDERED_SITES = {
     'mom6': {
         'version': 'snapshot-main',
         'base_url': 'https://mom6.readthedocs.io/en/main/',
@@ -33,11 +37,43 @@ MOM6_SITES = {
         'htmlzip_url': 'https://mom6.readthedocs.io/_/downloads/en/main/htmlzip/',
         'revision': '0e9a5611a9f6c99bfea12665da3a9146183521ee',
         'url': 'https://github.com/mom-ocean/MOM6',
+        'license_repo': 'mom-ocean/MOM6', 'license_file': 'LICENSE',
         'version_basis': ('Official rolling /en/main/ documentation site (authoritative for MOM6), '
                           'acquired from the rendered site (htmlzip artifact when published, polite '
                           'crawl otherwise); includes the Doxygen API reference '
                           'generated only on the rendered site; main branch observed at commit '
                           '0e9a5611a9f6c99bfea12665da3a9146183521ee when pinned; not release-certified'),
+    },
+    'uwtools': {
+        'version': 'snapshot-main',
+        'target_release': '2.22.0',
+        'base_url': 'https://uwtools.readthedocs.io/en/main/',
+        'start_pages': ('index.html',),
+        'path': 'corpus/uwtools/source',
+        'revision': '8c902887ed04930f5ecd10212852a4f2c585e57c',
+        'url': 'https://github.com/ufs-community/uwtools',
+        'license_repo': 'ufs-community/uwtools', 'license_file': 'LICENSE',
+        'version_basis': ('Official rolling /en/main/ documentation site (authoritative for uwtools), '
+                          'crawled from the rendered site because the Sphinx autodoc API pages exist '
+                          'only there; the site declares release 2.22.0 and Read the Docs built main at '
+                          'commit 8c902887ed04930f5ecd10212852a4f2c585e57c when pinned; not '
+                          'release-certified'),
+    },
+    'fms': {
+        'version': '2026.03',
+        'base_url': 'https://noaa-gfdl.github.io/FMS/',
+        'start_pages': ('index.html', 'classes.html', 'hierarchy.html', 'pages.html', 'functions.html'),
+        'path': 'corpus/fms/source',
+        'revision': '6534c3e4c6e42480ddaaeec7fd08b712863401d4',
+        'url': 'https://github.com/NOAA-GFDL/FMS',
+        'license_repo': 'NOAA-GFDL/FMS', 'license_file': 'LICENSE',
+        'workers': 4, 'delay': 0.5,
+        'version_basis': ('Official FMS Doxygen site on GitHub Pages (authoritative for the FMS API), '
+                          'which NOAA-GFDL/FMS rebuilds from the repository on each published release; '
+                          'observed built 2026-10-09 from release tag 2026.03 (commit '
+                          '6534c3e4c6e42480ddaaeec7fd08b712863401d4) when pinned; includes the Doxygen '
+                          'API reference generated only on the rendered site; a later crawl after a new '
+                          'release would describe that release'),
     },
 }
 
@@ -195,7 +231,7 @@ def copy_licenses(repo, target_dir, names):
 def fetch_license_via_api(repo, commit, name, destination):
     """Fetch one repository file through the GitHub contents API.
 
-    Used for crawled-site corpora (MOM6) where no checkout exists; raw.githubusercontent
+    Used for crawled-site corpora (MOM6, uwtools, FMS) where no checkout exists; raw.githubusercontent
     does not follow the repository's LICENSE symlink, the contents API does.
     """
     data = api_json(f'https://api.github.com/repos/{repo}/contents/{name}?ref={commit}')
@@ -225,7 +261,7 @@ def already_acquired(library, sources, existing_lock):
     """True when a library's corpus, lock record and catalog entry are all present.
 
     A refresh then reuses the existing acquisition instead of re-fetching. For
-    the crawled MOM6 site this avoids re-tripping the Read the Docs throttle on
+    crawled sites (MOM6, uwtools) this avoids re-tripping the Read the Docs throttle on
     every build; only an explicit ``--latest`` re-acquires a pinned snapshot.
     """
     if library not in existing_lock:
@@ -244,8 +280,8 @@ def main():
                         help='Refresh snapshots to the newest release tag/branch and record new commits')
     args = parser.parse_args()
 
-    wanted = {name.strip() for name in args.only.split(',')} if args.only else set(SNAPSHOT) | set(MOM6_SITES)
-    unknown = wanted - set(SNAPSHOT) - set(MOM6_SITES)
+    wanted = {name.strip() for name in args.only.split(',')} if args.only else set(SNAPSHOT) | set(RENDERED_SITES)
+    unknown = wanted - set(SNAPSHOT) - set(RENDERED_SITES)
     if unknown:
         parser.error(f'Unknown libraries: {", ".join(sorted(unknown))}')
 
@@ -313,43 +349,50 @@ def main():
             lock[library] = {**config, 'exts': list(config['exts']),
                              'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
-        for library in MOM6_SITES:
+        for library in RENDERED_SITES:
             if library not in wanted:
                 continue
             if not args.latest and already_acquired(library, sources, existing_lock):
                 print(f'{library}: already acquired; skipping refresh', flush=True)
                 skipped.add(library)
                 continue
-            config = MOM6_SITES[library]
+            config = RENDERED_SITES[library]
+            source_kind = None
             # Prefer the site's single htmlzip artifact: one request instead of a
             # page-by-page crawl, which avoids tripping the Read the Docs throttle.
             # Fall back to a patient crawl if the artifact endpoint is unavailable.
-            try:
-                # Wait out a persistent throttle window: up to 10 attempts, each
-                # backing off to at most 15 minutes, all as single requests.
-                stored = download_html_zip(config['htmlzip_url'], stage / library / 'source',
-                                           retries=10, max_delay=900.0)
-                count = len(stored)
-                source_kind = 'htmlzip'
-            except Exception as error:
-                print(f'{library}: htmlzip download failed ({error}); crawling the site instead',
-                      flush=True)
+            if config.get('htmlzip_url'):
+                try:
+                    # Wait out a persistent throttle window: up to 10 attempts, each
+                    # backing off to at most 15 minutes, all as single requests.
+                    stored = download_html_zip(config['htmlzip_url'], stage / library / 'source',
+                                               retries=10, max_delay=900.0)
+                    count = len(stored)
+                    source_kind = 'htmlzip'
+                except Exception as error:
+                    print(f'{library}: htmlzip download failed ({error}); crawling the site instead',
+                          flush=True)
+            if source_kind is None:
                 # Read the Docs throttles aggressive crawlers; pace every request
                 # with a few workers and a patient per-page retry so the rate
                 # budget is respected instead of tripped.
-                count = crawl_site(library, stage / library / 'source', sites=MOM6_SITES,
-                                   workers=2, retries=12, delay=2.0)
+                count = crawl_site(library, stage / library / 'source', sites=RENDERED_SITES,
+                                   workers=config.get('workers', 2), retries=12,
+                                   delay=config.get('delay', 2.0))
                 source_kind = 'crawl'
             if count == 0:
                 raise ValueError(f'{library}: no pages were fetched')
-            # The crawled site carries no license; keep the repository's Apache-2.0
-            # LICENSE (a symlink raw URLs do not serve) beside the corpus.
-            fetch_license_via_api('mom-ocean/MOM6', config['revision'], 'LICENSE',
-                                  stage / library / 'LICENSE')
-            new_entries.append({'name': library + '-docs', 'path': config['path'], 'library': library,
-                                'version': config['version'], 'kind': 'documentation', 'managed': True,
-                                'revision': config['revision'], 'url': config['base_url'],
-                                'version_basis': config['version_basis']})
+            # A crawled site carries no license; keep the repository's own LICENSE
+            # (a symlink raw URLs do not serve) beside the corpus.
+            fetch_license_via_api(config['license_repo'], config['revision'], config['license_file'],
+                                  stage / library / config['license_file'])
+            entry = {'name': library + '-docs', 'path': config['path'], 'library': library,
+                     'version': config['version'], 'kind': 'documentation', 'managed': True,
+                     'revision': config['revision'], 'url': config['base_url'],
+                     'version_basis': config['version_basis']}
+            if 'target_release' in config:
+                entry['target_release'] = config['target_release']
+            new_entries.append(entry)
             lock[library] = {**config, 'pages': count, 'acquisition': source_kind,
                              'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
 

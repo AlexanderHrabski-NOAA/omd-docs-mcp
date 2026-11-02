@@ -10,7 +10,8 @@ from knowledge import LIBRARIES, build, markup_sections
 
 
 WEATHER_LIBRARIES = ('dask', 'dask-jobqueue', 'ecflow', 'ufs-weather-model',
-                     'mom6', 'cice', 'fv3', 'mpas', 'grib2io')
+                     'mom6', 'cice', 'fv3', 'mpas', 'grib2io', 'uwtools', 'fms')
+RENDERED_LIBRARIES = {'mom6', 'uwtools', 'fms'}
 
 
 class WeatherRegistrationTests(unittest.TestCase):
@@ -23,17 +24,50 @@ class WeatherRegistrationTests(unittest.TestCase):
         import fetch_weather
 
         self.assertIn('mom6', FETCHED_LIBRARIES)
-        self.assertIn('mom6', fetch_weather.MOM6_SITES)
-        self.assertEqual(fetch_weather.MOM6_SITES['mom6']['base_url'],
+        self.assertIn('mom6', fetch_weather.RENDERED_SITES)
+        self.assertEqual(fetch_weather.RENDERED_SITES['mom6']['base_url'],
                          'https://mom6.readthedocs.io/en/main/')
-        self.assertEqual(fetch_weather.MOM6_SITES['mom6']['start_pages'], ('index.html',))
-        self.assertEqual(fetch_weather.MOM6_SITES['mom6']['version'], 'snapshot-main')
+        self.assertEqual(fetch_weather.RENDERED_SITES['mom6']['start_pages'], ('index.html',))
+        self.assertEqual(fetch_weather.RENDERED_SITES['mom6']['version'], 'snapshot-main')
+
+    def test_rendered_sites_are_fetched_at_build_time(self):
+        import fetch_weather
+
+        self.assertEqual(set(fetch_weather.RENDERED_SITES), RENDERED_LIBRARIES)
+        for library, config in fetch_weather.RENDERED_SITES.items():
+            with self.subTest(library=library):
+                self.assertIn(library, FETCHED_LIBRARIES)
+                for key in ('version', 'base_url', 'start_pages', 'path', 'revision', 'url',
+                            'license_repo', 'license_file', 'version_basis'):
+                    self.assertIn(key, config)
+                self.assertRegex(config['revision'], r'^[0-9a-f]{40}$')
+                self.assertTrue(config['base_url'].endswith('/'))
+                self.assertEqual(config['path'], f'corpus/{library}/source')
+
+    def test_uwtools_is_a_labelled_rolling_snapshot(self):
+        import fetch_weather
+
+        uwtools = fetch_weather.RENDERED_SITES['uwtools']
+        self.assertEqual(uwtools['base_url'], 'https://uwtools.readthedocs.io/en/main/')
+        self.assertEqual(uwtools['version'], 'snapshot-main')
+        self.assertEqual(uwtools['target_release'], '2.22.0')
+        # No published htmlzip for uwtools: it is crawled directly.
+        self.assertNotIn('htmlzip_url', uwtools)
+
+    def test_fms_is_labelled_with_its_release(self):
+        import fetch_weather
+
+        fms = fetch_weather.RENDERED_SITES['fms']
+        self.assertEqual(fms['base_url'], 'https://noaa-gfdl.github.io/FMS/')
+        self.assertEqual(fms['version'], '2026.03')
+        self.assertIn('index.html', fms['start_pages'])
+        self.assertNotIn('htmlzip_url', fms)
 
     def test_snapshot_pins_cover_seven_repositories(self):
         import fetch_weather
 
         self.assertEqual(set(fetch_weather.SNAPSHOT),
-                         set(WEATHER_LIBRARIES) - {'mom6'})
+                         set(WEATHER_LIBRARIES) - RENDERED_LIBRARIES)
         for library, config in fetch_weather.SNAPSHOT.items():
             with self.subTest(library=library):
                 for key in ('repo', 'ref', 'commit', 'version', 'doc_dir', 'exts', 'licenses'):

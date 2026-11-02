@@ -16,15 +16,15 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 RUN uv sync --frozen --no-install-project
 
 # Build a fresh index from the catalog and bundled sources. PyTorch docs are
-# opt-in; MOM6 and grib2io are fetched from their pinned official sources.
+# opt-in; MOM6, uwtools, FMS and grib2io are fetched from their pinned official sources.
 # The weather lock lets fetch_weather skip
 # re-acquiring any collection already present in the build context; a clean
-# clone has no corpus/mom6, so there the crawl still runs.
+# clone has no corpus/mom6, corpus/uwtools or corpus/fms, so there the crawl still runs.
 COPY corpus.catalog.json weather-lock.json ./
 COPY src/ ./src/
 COPY corpus/ ./corpus/
 RUN if [ "$INCLUDE_PYTORCH" = "1" ]; then python src/fetch_pytorch.py; fi \
-    && python src/fetch_weather.py --only mom6,grib2io \
+    && python src/fetch_weather.py --only mom6,uwtools,fms,grib2io \
     && python src/ingest.py \
     && python src/build_embeddings.py --cache-dir /app/model-cache
 

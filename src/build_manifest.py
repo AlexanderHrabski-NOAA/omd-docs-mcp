@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FETCHED_LIBRARIES = {'pytorch', 'pytorch-forecasting', 'mom6', 'grib2io'}
+FETCHED_LIBRARIES = {'pytorch', 'pytorch-forecasting', 'mom6', 'grib2io', 'uwtools', 'fms'}
 
 
 def generate(catalog_path, output_path, exclude=frozenset()):

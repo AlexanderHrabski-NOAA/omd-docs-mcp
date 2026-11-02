@@ -50,7 +50,7 @@ async def main():
                 assert ccpp_scm['collections']['ccpp-scm']==[]
                 # Weather/workflow libraries route through the generic tools; the
                 # synthetic corpus has no such units, so an accepted label returns [].
-                for weather_library in ('dask','ecflow','mom6','mpas','fv3','cice','ufs-weather-model','dask-jobqueue'):
+                for weather_library in ('dask','ecflow','mom6','mpas','fv3','cice','ufs-weather-model','dask-jobqueue','uwtools','fms'):
                     empty=await call('search_docs',{'query':'namelist','library':weather_library})
                     empty=empty.get('result',empty) if isinstance(empty,dict) else empty
                     assert empty==[],weather_library

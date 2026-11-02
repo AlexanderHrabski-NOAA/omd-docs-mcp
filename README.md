@@ -1,11 +1,11 @@
 # OMD Library Docs MCP Server
 
 A local, read-only documentation retrieval server for GitHub Copilot Agent
-mode and Claude Code. **omd** indexes sixteen collections by default, with two
+mode and Claude Code. **omd** indexes eighteen collections by default, with two
 optional PyTorch collections — ESMF/NUOPC,
 Kokkos, Kokkos Kernels, NWS-HPC production standards, JEDI, CCPP, CCPP-SCM,
 grib2io, Dask, dask-jobqueue, ecFlow, UFS Weather
-Model, MOM6, CICE, FV3 and MPAS — and retrieves complete
+Model, MOM6, CICE, FV3, MPAS, uwtools and FMS — and retrieves complete
 manual sections, Fortran routines and C++ examples with release provenance
 and citations. It separates API requirements, examples, framework
 implementation, and your application code.
@@ -20,9 +20,10 @@ ESMF, Kokkos, standards, JEDI, CCPP, Dask, dask-jobqueue, ecFlow, UFS, CICE,
 FV3 and MPAS source snapshots are bundled in the
 repository. PyTorch and PyTorch Forecasting are optional collections; enable
 them explicitly during the Docker build to fetch their versioned HTML docs.
-The MOM6 site is crawled from
-`https://mom6.readthedocs.io/en/main/`, while building the Docker image. The
-generated `corpus.json` manifest and SQLite index are build artifacts, not
+The MOM6, uwtools and FMS sites are crawled from
+`https://mom6.readthedocs.io/en/main/`,
+`https://uwtools.readthedocs.io/en/main/` and `https://noaa-gfdl.github.io/FMS/`
+while building the Docker image. The generated `corpus.json` manifest and SQLite index are build artifacts, not
 committed inputs.
 
 | Collection | Content | Version label | Units |
@@ -45,6 +46,8 @@ committed inputs.
 | `fv3` | FV3 LaTeX technical guide (`fv3_technical_2021.tex`) at release tag `FV3-202604-public` (commit `6f658bd00ffa`), plus example Fortran/README files; Jupyter notebooks are not indexed | `202604` | bundled |
 | `mpas` | MPAS-Dev/MPAS-Documents (the authoritative MPAS documentation repository) master commit `69b46ed16748` — user's guides, developer's guide and design documents in LaTeX; no upstream license file, attribution recorded | `snapshot-69b46ed16748` | bundled |
 | `grib2io` | NOAA-MDL grib2io documentation source at release tag `v2.8.1`; acquisition records the resolved commit and retains its MIT license | `2.8.1` | fetched during build |
+| `uwtools` | Complete Unified Workflow Tools HTML docs crawled from `https://uwtools.readthedocs.io/en/main/` (the authoritative site; includes the Sphinx autodoc API reference that exists only rendered; the site declares release 2.22.0 and was built from main commit `8c902887ed04`) | `snapshot-main` | generated during build |
+| `fms` | Complete FMS Doxygen HTML docs crawled from `https://noaa-gfdl.github.io/FMS/` (the authoritative site, rebuilt by NOAA-GFDL/FMS on each published release; observed built from release tag `2026.03`, commit `6534c3e4c6e4`) | `2026.03` | generated during build |
 
 Unit counts for fetched collections are reported by `list_collections` after
 building the index. Kokkos pins are recorded in `kokkos-lock.json` (stable releases checked
@@ -79,7 +82,8 @@ workflow collections, Dask and dask-jobqueue carry BSD-3 `LICENSE.txt`, ecFlow
 carries Apache-2.0 `LICENSE` and `NOTICE`, CICE carries BSD-3 `LICENSE.pdf` and
 `COPYRIGHT.pdf`, FV3 carries LGPL v3 `LICENSE.md`, MOM6 carries Apache-2.0, and
 the UFS Users Guide carries the repository's mixed-component `LICENSE.md` —
-each retained beside its corpus directory. grib2io's MIT `LICENSE` is retained
+each retained beside its corpus directory. uwtools and FMS carry Apache-2.0
+`LICENSE` files, likewise retained. grib2io's MIT `LICENSE` is retained
 beside its fetched documentation.
 `MPAS-Dev/MPAS-Documents` ships no license file; its attribution is recorded in
 the catalog `version_basis`.
@@ -456,19 +460,28 @@ uv run src/ingest.py
 ```
 
 Weather and workflow docs — Dask, dask-jobqueue, ecFlow, UFS Weather Model,
-CICE, FV3 and MPAS git snapshots, plus the MOM6 site crawl (requires Git and
-internet):
+CICE, FV3 and MPAS git snapshots, plus the MOM6, uwtools and FMS site crawls
+(requires Git and internet):
 
 ```sh
 uv run src/fetch_weather.py              # fetch any collection not yet acquired
 uv run src/fetch_weather.py --latest     # re-fetch all to newest tag/branch (re-crawls MOM6)
 uv run src/fetch_weather.py --only mom6  # acquire MOM6 only if its corpus is missing
+uv run src/fetch_weather.py --only uwtools,fms  # acquire the uwtools and FMS site crawls
 uv run src/ingest.py
 ```
 
 MOM6 is crawled from `https://mom6.readthedocs.io/en/main/` during the Docker
-build because its Doxygen API reference exists only on the rendered site. The
-other fourteen collections are bundled sources or fetched from pinned releases.
+build because its Doxygen API reference exists only on the rendered site. uwtools
+(`https://uwtools.readthedocs.io/en/main/`) and FMS
+(`https://noaa-gfdl.github.io/FMS/`) are crawled the same way, for their Sphinx
+autodoc and Doxygen API references. Read the Docs publishes no htmlzip for
+uwtools and GitHub Pages publishes none for FMS, so both are crawled page by
+page. The FMS site is rebuilt only when a release is published, so its `2026.03`
+label describes the release observed at pin time; a fresh crawl after a newer
+release (for example in a clean Docker build) would index that release's pages
+under the same label until the pin is updated. The
+other collections are bundled sources or fetched from pinned releases.
 `weather-lock.json` records every pin. MPAS documentation comes from the
 separate `MPAS-Dev/MPAS-Documents` repository (the authoritative docs repo,
 LaTeX-based; the model repo's `docs/` is a stub). FV3's Jupyter notebooks are
@@ -478,7 +491,8 @@ are included.
 A refresh is **idempotent**: any library already recorded in `weather-lock.json`
 with a populated `corpus/` tree and a catalog entry is skipped, so re-running the
 fetcher (or rebuilding Docker from a working tree) does not re-hit the network.
-The MOM6 site is a Read-the-Docs crawl that the platform throttles aggressively,
+The MOM6 and uwtools sites are Read-the-Docs crawls that the platform throttles
+aggressively,
 so this reuse matters; pass `--latest` to force a fresh crawl. The crawl paces
 each request (2s, 2 workers) and waits out rate-limit windows rather than dying
 on them.
@@ -508,7 +522,7 @@ NUOPC_CompSpecialize, NUOPC_DriverAddComp and NUOPC_Advertise. Real example sear
 check driver registration and cap labels against the pinned source commit, and
 regression coverage now pins prototype discoverability plus CCPP included-code
 and auxiliary-file handling.
-Further tests cover collection/version isolation across all eighteen libraries,
+Further tests cover collection/version isolation across all twenty libraries,
 Markdown, RST and LaTeX parsing, included-code retrieval, fetcher helpers, and real
 documentation from the Kokkos, NWS, JEDI and CCPP collections. Offline tests also
 cover hybrid semantic search and the embedding build with a stub encoder, and check
@@ -562,6 +576,8 @@ source and index may contain confidential code; keep them protected accordingly.
 - [CCPP documentation](https://ccpp-doc.readthedocs.io/en/latest/) — [source](https://github.com/NCAR/ccpp-doc)
 - [CCPP-SCM documentation](https://ccpp-scm.readthedocs.io/en/latest/) — [source](https://github.com/NCAR/ccpp-scm)
 - [NUOPC application prototypes](https://github.com/esmf-org/nuopc-app-prototypes/tree/patch/8.9.1)
+- [uwtools documentation](https://uwtools.readthedocs.io/en/main/) — [source](https://github.com/ufs-community/uwtools)
+- [FMS documentation](https://noaa-gfdl.github.io/FMS/) — [source](https://github.com/NOAA-GFDL/FMS)
 
 ## DISCLAIMER
 

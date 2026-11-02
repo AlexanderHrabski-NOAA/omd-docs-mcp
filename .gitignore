@@ -6,6 +6,8 @@ corpus.json
 corpus/pytorch/
 corpus/pytorch-forecasting/
 corpus/mom6/
+corpus/uwtools/
+corpus/fms/
 data/*
 !data/.gitkeep
 build/
